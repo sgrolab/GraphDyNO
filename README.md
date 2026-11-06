@@ -282,4 +282,4 @@ runs end-to-end on a single GPU; multi-GPU is not required.
 
 ## License
 
-This code is released under the MIT license (see `LICENSE`).
+This code is released under the Janelia Open‑Source License (see `LICENSE`).
