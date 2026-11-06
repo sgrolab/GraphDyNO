@@ -1,0 +1,38 @@
+.vscode/
+__pycache__/
+.pytest_cache/
+*.egg-info/
+*.so
+.envrc
+.venv/
+
+# Data directories
+/data/
+experiments/
+multirun/
+plots/
+figures/
+logs/
+.lsf_jobs/
+local/
+
+# Torch model files
+*.pt
+*.pth
+
+# Media files
+*.mp4
+*.png
+*.pdf
+*.dot
+*.tif
+*.svg
+*.pkl
+
+# dino ignores
+dino/livecell_raw/
+dino/cell_masks/
+
+# MLflow files
+mlruns/
+mlflow.db

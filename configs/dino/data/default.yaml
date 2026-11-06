@@ -1,0 +1,6 @@
+data_dir: ${oc.env:LIVECELL_DIR,./data/livecell}/cell_masks/
+raw_dir: ${oc.env:LIVECELL_DIR,./data/livecell}/raw/
+min_area: 200
+target_size: 224
+shard_size: 200000
+num_extract_workers: 8

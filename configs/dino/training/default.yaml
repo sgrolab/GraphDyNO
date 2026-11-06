@@ -1,0 +1,12 @@
+n_epochs: 150
+batch_size: 64
+lr: 1e-3
+scheduler:
+  step_size: 10
+  gamma: 0.5
+plot_every: 5
+early_stopping_patience: 15
+num_workers: 4
+loss_terms:
+  image_mse: 1.0
+  embedding_l2: 1e-3

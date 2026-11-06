@@ -1,0 +1,11 @@
+# @package _global_
+model:
+  gnn_inputs: [L, scale]
+  position_inputs: [x_features, interactions]
+  shape_mlps:
+    - [x_features, b, L, interactions]
+  scale_mlps:
+    - [x_features, b, scale, interactions]
+
+tags:
+  ablation: spatial_int

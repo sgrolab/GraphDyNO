@@ -1,0 +1,10 @@
+# @package _global_
+model:
+  gnn_inputs: []
+  position_inputs: [x_features]
+  shape_mlps:
+    - [x_features]
+  scale_mlps:
+    - [x_features, b, scale, scale_velocity]
+tags:
+  ablation: scale_only

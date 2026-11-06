@@ -1,0 +1,43 @@
+type: simulation
+
+n_objects: 400
+image_size: 64
+domain_size: 100
+dt: 0.01
+seed: 0
+
+generator:
+  n_trajectories: 10
+  trajectory_length: 1000
+  seed_offset: 0
+  cache_dir: ""
+  overwrite_existing: false
+
+params:
+  name: sphere_interaction
+  periodic_boundary: false
+  drag: 0.5
+  r_cutoff: 5
+  potential_D_e: 10
+  potential_a: 1.5
+  brownian_motion_std: 0.0
+
+  radius:
+    dist: linspace
+    min: 0.5
+    max: 1.5
+    steps: 20
+    repeats: 20
+    interleaved: true
+
+  growth_rate:
+    dist: linspace
+    min: -0.05
+    max: 0.05
+    steps: 4
+    repeats: 100
+    interleaved: false
+
+  relaxation_steps: 50
+  relaxation_dt: 0.01
+  relaxation_drag: 0.5

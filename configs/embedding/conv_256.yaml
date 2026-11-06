@@ -1,0 +1,10 @@
+# @package _global_
+defaults:
+  - /pth: default
+  - override /shape: conv
+
+shape:
+  checkpoint_path: ${pth.Conv_256}
+
+tags:
+  embedding: conv_fix

@@ -1,0 +1,53 @@
+# @package _global_
+defaults:
+  - override /data: polyhoop
+  - override /model: unified_dino
+
+data:
+  image_size: 128
+  n_objects: 500
+  generator:
+    n_trajectories: 3
+    trajectory_length: 2000
+    seed_offset: 42
+    cache_dir: ${oc.env:DATA_DIR,./data}/more_oscillating_clusters_new/
+  params:
+    radius: 2.0
+    oscillatory_growth: true
+    area_fluct_period: 2
+    random_phases: false
+    area_fluct_amp:
+      dist: linspace
+      min: 0.785398
+      max: 5.283185
+      steps: 4
+      repeats: 125
+    density_fraction: 0.733
+
+model:
+  embedding_dim: 2
+  interaction_dim: 2
+  hidden_dim: 512
+  hidden_layers: 1
+  embedding_noise_std: 0.1
+  input_noise_std: 0.1
+  L_skip_connection: true
+  L_dropout_prob: 0.2
+
+training:
+  n_epochs: 150
+  loss_terms:
+    position_mse: 1.0
+    velocity_mse: 1.0
+    dino_mse: 1.0
+    scale_mse: 1.0
+    parameter_embedding_l2: 0
+  finetune_decoder:
+    loss_terms:
+      embedding_l2: 0.0
+  rollout:
+    enabled: false
+
+dataloader:
+  train_ratio: 0.9
+  val_ratio: 0.1

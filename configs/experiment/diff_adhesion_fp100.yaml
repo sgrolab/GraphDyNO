@@ -1,0 +1,58 @@
+# @package _global_
+defaults:
+  - override /data: polyhoop
+
+data:
+  seed: 5
+  image_size: 128
+  n_objects: 600
+  generator:
+    cache_dir: ${oc.env:DATA_DIR,./data}/diff_adhesion_fp100_cache/
+    n_trajectories: 3
+    trajectory_length: 2000
+    seed_offset: 1
+  params:
+    radius: 2.0
+    elongation: 0
+    growth_rate: 0
+    oscillatory_growth: false
+
+    fp: 100
+    Dr: 1
+
+    kh:
+      dist: logspace
+      min: 1e4
+      max: 5e4
+      steps: 2
+      repeats: 300
+
+    placement: hex_grid
+    shuffle_placement: true
+
+    wall_box: true
+    wall_box_size: 0
+    wall_kh: 0
+
+training:
+  n_epochs: 150
+  loss_terms:
+    position_mse: 1.0
+    velocity_mse: 1.0
+    dino_mse: 1.0
+    scale_mse: 1.0
+    parameter_embedding_l2: 0
+  finetune_decoder:
+    loss_terms:
+      embedding_l2: 0.0
+  rollout:
+    enabled: false
+
+model:
+  indices_of_mlp_features: [2, 3]
+  L_dropout_prob: 0.0
+  interaction_dim: 32
+
+dataloader:
+  train_ratio: 0.9
+  val_ratio: 0.1

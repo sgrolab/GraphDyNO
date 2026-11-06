@@ -1,0 +1,14 @@
+defaults:
+  - data: default
+  - dataloader: default
+  - model: default
+  - training: default
+  - shape: dino
+  - _self_
+
+hydra:
+  run:
+    dir: ./experiments/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: ./experiments/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}

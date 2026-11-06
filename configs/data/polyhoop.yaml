@@ -1,0 +1,68 @@
+type: simulation
+
+n_objects: 400
+image_size: 128
+domain_size: 100
+dt: 0.01
+seed: 42
+
+generator:
+  n_trajectories: 1
+  trajectory_length: 2500
+  init_steps: 0
+  init_compress_force: 0
+  seed_offset: 0
+  cache_dir: ""
+  overwrite_existing: false
+
+params:
+  name: polyhoop
+  num_substeps: 100
+
+  gam: 1e3
+  ka: 1e5
+  kr: 1e7
+  kh: 1e6
+  kl: 1e4
+  kb: 0
+  edge_thickness: 0.01
+  cv: 10
+
+  fp: 0
+  Dr: 0.5
+
+  growth_rate: 1.0
+
+  oscillatory_growth: false
+
+  area_fluct_period: 0
+  area_fluct_amp: 0
+
+  gamma: 1e3
+  gam_fluct_period: 0
+  gam_fluct_amp: 0
+  gamma_rate: 0
+
+  kl_fluct_period: 0
+  kl_fluct_amp: 0
+  kl_rate: 0
+
+  num_vertices: 40
+
+  radius:
+    dist: linspace
+    min: 0.5
+    max: 1.5
+    steps: 20
+    repeats: 20
+    interleaved: true
+
+  density_fraction: 1.0
+
+  r_cutoff: 5.0
+
+  position_noise_std: 0
+
+  periodic_boundary: false
+
+  relaxation_steps: 0

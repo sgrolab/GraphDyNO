@@ -1,0 +1,16 @@
+type: dino
+checkpoint_path: ???
+dino_model: null
+dino_use_patches: true
+dino_backend: hf
+dino_repo_dir: null
+dino_weights_path: null
+dino_weights_url: null
+dino_trust_weights: false
+sdf_workers: 32
+target_size: 224
+
+finetune:
+  enabled: true
+  lr: 1e-3
+  epochs: 4

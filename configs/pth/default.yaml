@@ -1,0 +1,18 @@
+S_256: ${oc.env:CHECKPOINTS_DIR,./checkpoints}/S_256.pt
+SP_256: ${oc.env:CHECKPOINTS_DIR,./checkpoints}/SP_256.pt
+B_256: ${oc.env:CHECKPOINTS_DIR,./checkpoints}/B_256.pt
+L_256: ${oc.env:CHECKPOINTS_DIR,./checkpoints}/L_256.pt
+H_256: ${oc.env:CHECKPOINTS_DIR,./checkpoints}/H_256.pt
+F_256: ${oc.env:CHECKPOINTS_DIR,./checkpoints}/F_256.pt
+F_1024: ${oc.env:CHECKPOINTS_DIR,./checkpoints}/F_1024.pt
+F_2048: ${oc.env:CHECKPOINTS_DIR,./checkpoints}/F_2048.pt
+
+Conv_16: ${oc.env:CHECKPOINTS_DIR,./checkpoints}/Conv_16.pt
+Conv_32: ${oc.env:CHECKPOINTS_DIR,./checkpoints}/Conv_32.pt
+Conv_64: ${oc.env:CHECKPOINTS_DIR,./checkpoints}/Conv_64.pt
+Conv_128: ${oc.env:CHECKPOINTS_DIR,./checkpoints}/Conv_128.pt
+Conv_256: ${oc.env:CHECKPOINTS_DIR,./checkpoints}/Conv_256.pt
+
+DINOV2_REPO: ${oc.env:DINOV2_REPO,./dinov2}
+CellDino_CA_L16_backbone: ${oc.env:CHECKPOINTS_DIR,./checkpoints}/channel_adaptive_dino_vitl16_pretrain_cells-ef7c17ff.pth
+CellDino_CA_256: ${oc.env:CHECKPOINTS_DIR,./checkpoints}/CellDino_CA_256.pt

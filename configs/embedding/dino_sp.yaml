@@ -1,0 +1,10 @@
+# @package _global_
+defaults:
+  - /pth: default
+  - override /shape: dino
+
+shape:
+  checkpoint_path: ${pth.SP_256}
+
+tags:
+  embedding: dino

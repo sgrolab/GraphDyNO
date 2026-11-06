@@ -1,0 +1,31 @@
+type: real
+
+loss_mask_mode: strict
+
+embedding_dim: 2
+num_nodes: ${data.n_objects}
+interaction_dim: 2
+spatial_dim: 2
+hidden_dim: 256
+hidden_layers: 4
+activation: PReLU
+feature_dim: 4
+indices_of_mlp_features: [2, 3]
+
+skip_connection: true
+L_skip_connection: true
+L_dropout_prob: 0.0
+scale_dropout_prob: 0.0
+
+embedding_noise_std: 0.0
+input_noise_std: 0.0
+seed: 0
+
+gnn_inputs: [L, scale]
+position_inputs: [x_features, interactions]
+shape_mlps:
+  - [L, b, interactions]
+scale_mlps:
+  - [L, b, interactions, scale]
+
+history_window: 0

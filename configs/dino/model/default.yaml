@@ -1,0 +1,17 @@
+dino_backend: hf
+dino_model: B
+dino_repo_dir: null
+dino_weights_path: null
+dino_weights_url: null
+dino_trust_weights: false
+bottleneck_dim: 256
+output_size: 224
+use_patches: true
+channels:
+  - 256
+  - 128
+  - 64
+  - 32
+  - 16
+intermediate_conv_layers: 1
+proj_hidden_layers: 0

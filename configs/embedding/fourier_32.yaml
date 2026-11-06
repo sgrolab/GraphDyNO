@@ -1,0 +1,9 @@
+# @package _global_
+defaults:
+  - override /shape: fourier
+
+shape:
+  n_coefficients: 32
+
+tags:
+  embedding: fourier

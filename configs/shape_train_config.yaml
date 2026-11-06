@@ -1,0 +1,13 @@
+defaults:
+  - shape: conv
+  - dino/data: default
+  - dino/training: default
+  - _self_
+
+experiment_name: convolutional_autoencoder
+
+hydra:
+  run:
+    dir: ./experiments/shape/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: ./experiments/shape/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}

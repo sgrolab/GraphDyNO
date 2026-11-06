@@ -1,0 +1,9 @@
+type: conv
+bottleneck_dim: 256
+output_size: 224
+channels: [256, 128, 64, 32, 16]
+intermediate_conv_layers: 1
+
+checkpoint_path: null
+sdf_workers: 32
+target_size: 224

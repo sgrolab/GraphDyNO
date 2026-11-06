@@ -1,0 +1,11 @@
+# @package _global_
+model:
+  gnn_inputs: [L, scale, L_velocity, scale_velocity]
+  position_inputs: [x_features, interactions]
+  shape_mlps:
+    - [x_features, L, interactions, L_velocity, b]
+  scale_mlps:
+    - [x_features, interactions, scale, scale_velocity, b]
+  history_window: 0
+tags:
+  ablation: full_no_history

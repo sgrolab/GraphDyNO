@@ -1,0 +1,39 @@
+n_epochs: 40
+
+optimizer:
+  type: AdamW
+  lr: 1e-3
+  weight_decay: 1e-4
+
+grad_clip_norm: 10.0
+
+loss_terms:
+  position_mse: 1.0
+  velocity_mse: 1.0
+  image_bce: 1.0
+  image_dice: 1.0
+  shape_mse: 1.0
+  parameter_embedding_l2: 0
+
+finetune_decoder:
+  enabled: true
+  n_epochs: 4
+  lr: 1e-4
+  batch_size: 256
+  sdf_workers: 32
+  refreeze: true
+  n_trajectories: 1
+  loss_terms:
+    image_mse: 1.0
+    embedding_l2: 0.0
+  cache_weights: true
+  force_refinetune: false
+
+rollout:
+  enabled: false
+  schedule:
+    - [0, 1]
+    - [20, 2]
+    - [40, 4]
+  lr_decay_on_transition: 1.0
+  lr_warmup_epochs: 0

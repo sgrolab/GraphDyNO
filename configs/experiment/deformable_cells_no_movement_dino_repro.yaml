@@ -1,0 +1,54 @@
+# @package _global_
+defaults:
+  - override /data: polyhoop
+  - override /model: unified_dino
+
+data:
+  image_size: 128
+  generator:
+    n_trajectories: 3
+    trajectory_length: 2500
+    seed_offset: 42
+    cache_dir: ${oc.env:DATA_DIR,./data}/growing_cell_cache/
+  params:
+    growth_rate:
+      dist: linspace
+      min: 0.0
+      max: 2.0
+      steps: 20
+      repeats: 20
+      interleaved: false
+    density: 1.0
+
+model:
+  embedding_dim: 2
+  interaction_dim: 32
+  embedding_noise_std: 0.1
+  hidden_dim: 64
+  hidden_layers: 1
+  gnn_inputs: [L, scale, L_velocity, scale_velocity]
+  position_inputs: [x_features, interactions]
+  shape_mlps:
+    - [x_features, L, interactions, L_velocity, b]
+  scale_mlps:
+    - [x_features, interactions, scale, scale_velocity, b]
+
+training:
+  n_epochs: 80
+  loss_terms:
+    position_mse: 1.0
+    velocity_mse: 1.0
+    dino_mse: 1.0
+    scale_mse: 1.0
+    parameter_embedding_l2: 1e-3
+  rollout:
+    enabled: true
+    schedule:
+      - [0, 1]
+      - [20, 2]
+      - [40, 4]
+      - [80, 6]
+
+dataloader:
+  train_ratio: 0.9
+  val_ratio: 0.1

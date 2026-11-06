@@ -1,0 +1,12 @@
+defaults:
+  - /pth: default
+  - dino/model: default
+  - dino/data: default
+  - dino/training: default
+  - _self_
+
+experiment_name: dino_autoencoder
+
+hydra:
+  run:
+    dir: ./experiments/dino/${now:%Y-%m-%d}/${now:%H-%M-%S}

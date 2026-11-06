@@ -1,0 +1,69 @@
+figure2:
+  experiment: fig2_best
+  embedding_experiment: fig2_best
+
+figure3:
+  growth: growing_cells_dino
+  kl: tension_clusters
+  kl_filters:
+    embedding: dino
+    ablation: full_int
+
+sweeps:
+  oscillation: oscillation_paper
+  tension: tension_clusters
+  adhesion: diff_adhesion_ablations
+
+scale_only:
+  experiment: scale
+
+embedding_kl_rate:
+  experiment: tension_clusters
+  filters:
+    embedding: dino
+    ablation: full_int
+
+combined_params:
+  two_params:
+    experiment: osc_amp_x_adhesion_seeds20
+    k: 4
+  three_params:
+    experiment: osc_amp_x_adhesion_x_tension_kh1e5_seeds20
+    k: 8
+
+ctc:
+  experiment: ctc_dic_psc_late
+  tag_filters:
+    ablation: b_shape_scale_int
+  param_filters:
+    model.embedding_dim: 16
+    training.n_epochs: 800
+    dataloader.batch_size: 2
+  label: dataset_id
+
+arch_sweep:
+  experiment: osc_arch_sweep
+
+cell_dino:
+  oscillation: oscillation_cell_dino
+  tension: tension_cell_dino
+  adhesion: diff_adhesion_cell_dino
+
+seg_ablation:
+  experiment: segabl_oscillation
+  control: none
+
+stochastic:
+  experiment: diff_adhesion_fp_ladder
+
+timescales:
+  experiment: osc_period_clusters
+
+grok_h64:
+  experiment: osc_grok_param_count
+  param_filters:
+    model.hidden_dim: 64
+    training.n_epochs: 200
+    training.rollout.schedule: "[[0, 1], [40, 2], [80, 4]]"
+  early_epoch: 40
+  late_epoch: 200

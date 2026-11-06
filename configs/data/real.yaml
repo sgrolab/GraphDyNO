@@ -1,0 +1,45 @@
+type: real
+
+n_objects: 130
+image_size: 160
+domain_size: 1024
+dt: 1.0
+seed: 0
+
+generator:
+  n_trajectories: 1
+  trajectory_length: 32
+  seed_offset: 0
+  cache_dir: ""
+  overwrite_existing: false
+
+params:
+  name: real
+  root: real_cell_data
+
+  videos:
+    - {dataset: DIC-C2DH-HeLa, seq: "01"}
+    - {dataset: PhC-C2DH-U373, seq: "01"}
+    - {dataset: Fluo-N2DH-GOWT1, seq: "01"}
+    - {dataset: Fluo-N2DH-SIM+, seq: "01"}
+
+  r_max_px: 140
+
+  window_length: 32
+
+  contact_frac: 1.0
+  contact_px: null
+
+  min_track_length: 10
+  min_area_px: 8
+  border_policy: invalidate_frame
+  max_tracks_per_video: null
+  max_windows_per_video: null
+
+  division_mode: new_slots
+  center_fov: true
+
+  pseudo_split: null
+
+  scan_workers: 32
+  raster_workers: 32

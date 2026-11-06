@@ -1,0 +1,15 @@
+# @package _global_
+defaults:
+  - /pth: default
+  - override /shape: dino
+
+shape:
+  dino_backend: cell_dino
+  dino_model: CELL_CA_L16
+  dino_use_patches: false
+  dino_repo_dir: ${pth.DINOV2_REPO}
+  dino_weights_path: ${pth.CellDino_CA_L16_backbone}
+  checkpoint_path: ${pth.CellDino_CA_256}
+
+tags:
+  embedding: cell_dino

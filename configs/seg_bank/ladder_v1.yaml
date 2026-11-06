@@ -1,0 +1,13 @@
+# @package _global_
+
+seg_bank:
+  name: ladder_v1
+  seed: 0
+  max_episode_len: 200
+  strict_balance: true
+  kinds:
+    partial: {rate: 0.15,  mean_len: 8,  area_frac_min: 0.55, area_frac_max: 0.85}
+    scale:   {rate: 0.15,  mean_len: 8,  delta_px: 3.0}
+    merge:   {rate: 0.075, mean_len: 1,  pad_factor: 2, close_px: 1.0}
+    miss:    {rate: 0.15,  mean_len: 3}
+    id_swap: {rate: 0.075, mean_len: 40}

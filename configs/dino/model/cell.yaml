@@ -1,0 +1,18 @@
+dino_backend: cell_dino
+dino_model: CELL_CA_L16
+dino_repo_dir: ${pth.DINOV2_REPO}
+dino_weights_path: ${pth.CellDino_CA_L16_backbone}
+dino_weights_url: null
+dino_trust_weights: false
+
+bottleneck_dim: 256
+output_size: 224
+use_patches: false
+channels:
+  - 256
+  - 128
+  - 64
+  - 32
+  - 16
+intermediate_conv_layers: 1
+proj_hidden_layers: 0

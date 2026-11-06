@@ -1,0 +1,29 @@
+# @package _global_
+
+model:
+  type: segablation
+  loss_mask_mode: strict
+
+training:
+  rollout:
+    enabled: false
+
+augmentation:
+  enabled: false
+
+seg_ablation:
+  enabled: true
+  seed: 0
+  bank: ladder_v1
+  strict_balance: true
+  max_episode_len: 200
+  centroid_noise_sigma_rel: 0.0
+  kinds:
+    partial: {rate: 0, mean_len: 8, area_frac_min: 0.55, area_frac_max: 0.85}
+    merge:   {rate: 0.01, mean_len: 1, pad_factor: 2, close_px: 1.0}
+    miss:    {rate: 0, mean_len: 3}
+    id_swap: {rate: 0, mean_len: 40}
+    scale:   {rate: 0, mean_len: 8, delta_px: 3.0}
+
+tags:
+  seg_ablation: merge_d1
