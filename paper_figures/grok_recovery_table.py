@@ -22,6 +22,7 @@ from pathlib import Path
 import pandas as pd
 
 from figure3 import _compute_lin_nl_r2
+from _ckpt_store import add_source_args, apply_source_args
 from _combo_common import TEX_IQR_DEFS, fmt_iqr, tex_iqr
 from _grok_common import EARLY, LATE, TARGETS, Snapshots, find_runs
 from _run_lookup import setup_mlflow_uri  # noqa: E402
@@ -122,7 +123,8 @@ def main():
     parser.add_argument("--output", default="./figures/grok_recovery_table.csv")
     parser.add_argument("--all-epochs", action="store_true",
                         help="also score every snapshot and write <output>_all_epochs.csv")
-    args = parser.parse_args()
+    add_source_args(parser)
+    args = apply_source_args(parser.parse_args())
     print(f"tracking uri: {setup_mlflow_uri()}")
 
     runs = find_runs(args.experiment)

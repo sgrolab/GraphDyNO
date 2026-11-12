@@ -275,7 +275,7 @@ class TestCollisions:
     def test_no_kind_is_systematically_favoured(self, chain_graph):
         """A random tiebreak, not a priority order.
 
-        Kind priority is what made the saturated tension levels realise wildly
+        Kind priority is what made the saturated membrane_stiffness levels realise wildly
         different compositions in the two sharing modes: the first kind took
         everything it wanted and the last took what was left. Under a hash
         tiebreak both kinds keep a similar FRACTION of what they asked for.

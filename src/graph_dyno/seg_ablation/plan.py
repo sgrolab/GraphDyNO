@@ -40,7 +40,7 @@ b-matching whose feasibility is a Hall condition on the contact graph, and that
 condition does not depend on the rate. `more_osc_clusters` has 122 degree-1
 slots among 379 with any contact at all (union-distinct partners per cell: 1.8,
 min 0), so several share a single possible partner and NO positive rate admits
-an exactly balanced assignment there. tension/adhesion, at 22-25 partners per
+an exactly balanced assignment there. membrane_stiffness/adhesion, at 22-25 partners per
 cell, are fine. What is therefore *enforced* is the harm rather than the proxy:
 `build.py` correlates the realized per-slot counts against every varied
 simulation parameter and refuses the build when a per-slot event or supervision
@@ -152,7 +152,7 @@ _SPEC_DEFAULTS: dict[str, Any] = {
     # per-slot merge counts and the clustered factor, at the `moderate` rate:
     #     dataset      i.i.d. edge sampling   stratified (this planner)
     #     more_osc            0.13                    0.15
-    #     tension             0.04                    0.08
+    #     membrane_stiffness             0.04                    0.08
     #     adhesion            0.07                    0.13
     # i.e. on these three paper caches contact degree barely tracks the label
     # either way, and the residual is dominated by which slots the contact
@@ -169,7 +169,7 @@ _SPEC_DEFAULTS: dict[str, Any] = {
     # trajectories (one vector per cell id, `model.num_nodes`). Under the
     # default per-trajectory draw, a cell corrupted in trajectory 0 is clean in
     # 1 and 2, so its embedding still sees mostly-clean supervision and the
-    # corruption averages out — which is why the tension ladder came back flat
+    # corruption averages out — which is why the membrane_stiffness ladder came back flat
     # at ARI 1.000 all the way to 4x. Sharing removes that escape hatch.
     #
     # EXACT for the single-slot kinds (partial, miss, scale) — identical t0,
@@ -492,7 +492,7 @@ def _waterfill(total: int, caps: np.ndarray, feasible: np.ndarray,
 
     Perfect balance is not always available: on `more_osc_clusters` a cell
     touches 1.8 distinct neighbours across the *whole* 2000-frame trajectory
-    (min 0), against 22-25 on tension/adhesion. Rather than silently skewing,
+    (min 0), against 22-25 on membrane_stiffness/adhesion. Rather than silently skewing,
     saturate the capacity-limited slots at their cap and split the remainder
     equally over the rest — then report which slots were capped, so the
     residual imbalance is visible instead of hidden.
@@ -939,7 +939,7 @@ def _check_balance(kind, role, spread, strict):
     that does not depend on the rate. `more_osc_clusters` has 122 degree-1
     slots against 379 slots with any contact at all, so several of them share
     a single possible partner and NO positive rate admits an exactly balanced
-    assignment there. (tension/adhesion, at 22-25 union-distinct partners per
+    assignment there. (membrane_stiffness/adhesion, at 22-25 union-distinct partners per
     cell, are fine.)
 
     The criterion that is actually enforced is therefore the *harm* rather than
@@ -961,11 +961,11 @@ def _check_balance(kind, role, spread, strict):
 #: strict` an invalid frame kills three transitions (t-1, t, t+1), so two
 #: invalid frames within 2 of each other cost less than two isolated ones. That
 #: turned out to be label-correlated in exactly the direction the stratification
-#: exists to prevent: on the tension cache at the merge_only rate, per-slot
+#: exists to prevent: on the membrane_stiffness cache at the merge_only rate, per-slot
 #: absorbed counts were perfectly balanced (spread 1) yet
 #: r(near-adjacent absorbed pairs, log10 kl) = +0.265 and
 #: r(lost transitions, log10 kl) = -0.264 — WORSE than i.i.d. edge sampling,
-#: which sits at 0.005. High-tension cells have fewer/shorter contact runs, so
+#: which sits at 0.005. High-stiffness cells have fewer/shorter contact runs, so
 #: the planner was forced to pack their episodes together.
 #:
 #: A 2-frame guard band makes the +-1 mask windows of two episodes on one slot

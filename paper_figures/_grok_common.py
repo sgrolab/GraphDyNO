@@ -18,6 +18,7 @@ from urllib.parse import urlparse
 import numpy as np
 import torch
 
+from _ckpt_store import CkptRun, ckpt_path
 from _run_lookup import find_runs_in_experiment, load_experiments_yaml
 
 GROK_CFG = load_experiments_yaml().get("grok_h64", {})
@@ -40,13 +41,18 @@ class Snapshots:
 
     def __init__(self, run):
         self.run = run
-        self.dirs = _dirs(run)
+        self.dirs = [] if isinstance(run, CkptRun) else _dirs(run)
         self._dict = None
+        if isinstance(run, CkptRun) and ckpt_path(run, "snapshots") is not None:
+            self._dict = torch.load(ckpt_path(run, "snapshots"), map_location="cpu")
         for d in self.dirs:
             if (d / "embedding_snapshots.pt").exists():
                 self._dict = torch.load(d / "embedding_snapshots.pt", map_location="cpu")
                 break
         state = None
+        if isinstance(run, CkptRun):
+            state = torch.load(ckpt_path(run, "final") or ckpt_path(run, "best"),
+                               map_location="cpu", weights_only=False)
         for d in self.dirs:
             for name in ("graph_decoder_model.pth", "graph_decoder_model_best.pth"):
                 if (d / name).exists():
@@ -96,11 +102,18 @@ def find_runs(experiment=None, param_filters=None):
 
 def pick_snapshots(experiment=None, run_name=None):
     """Snapshots of the run a single-run figure draws: `run_name` if given,
-    else the lowest model.seed. (These runs log no best_val_loss to select by.)
+    else `figure_seed` in experiments.yaml, else the lowest model.seed.
+    (These runs log no best_val_loss to select by.)
     """
     runs = find_runs(experiment)
     if run_name is None:
-        return Snapshots(runs[0])
+        seed = GROK_CFG.get("figure_seed")
+        if seed is None:
+            return Snapshots(runs[0])
+        for r in runs:
+            if str(r.data.params.get("model.seed")) == str(seed):
+                return Snapshots(r)
+        raise SystemExit(f"no matched run has model.seed {seed} (grok_h64.figure_seed)")
     for r in runs:
         if r.info.run_name == run_name:
             return Snapshots(r)

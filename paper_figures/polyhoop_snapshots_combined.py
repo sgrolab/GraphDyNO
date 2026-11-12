@@ -42,11 +42,11 @@ DEFAULT_VTP_ROOT = Path(os.environ.get(
 # Categorical colorblind palette shared with paper_figures/figure4v2.py.
 _CB = sns.color_palette("colorblind", 10)
 PALETTE_OSC = _CB[2:10]      # 8 colors — figure4v2 SPECS["oscillation_paper"]
-PALETTE_TENSION = _CB[0:2]   # 2 colors — figure4v2 SPECS["tension_clusters"]
+PALETTE_MEMBRANE_STIFFNESS = _CB[0:2]   # 2 colors — figure4v2 SPECS["membrane_stiffness_clusters"]
 PALETTE_ADHESION = _CB[6:8]  # 2 colors — figure4v2 SPECS["diff_adhesion_ablations"]
 
 
-# Row order: osc continuous, osc clusters, tension, adhesion.
+# Row order: osc continuous, osc clusters, membrane_stiffness, adhesion.
 ROWS = [
     dict(
         experiment="paper_oscillating_continuous",
@@ -65,10 +65,10 @@ ROWS = [
         colorbar_label=r"$\alpha$",
     ),
     dict(
-        experiment="tension_two_clusters",
-        row_label="tension",
+        experiment="membrane_stiffness_two_clusters",
+        row_label="stiffness",
         color_by="kls",
-        palette_slice=PALETTE_TENSION,
+        palette_slice=PALETTE_MEMBRANE_STIFFNESS,
         colorbar_label=r"$k_\ell$",
         colorbar_ticklabels=[r"$10^3$", r"$10^6$"],
     ),

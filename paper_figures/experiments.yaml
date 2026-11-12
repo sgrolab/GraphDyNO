@@ -4,21 +4,27 @@ figure2:
 
 figure3:
   growth: growing_cells_dino
-  kl: tension_clusters
+  kl: membrane_stiffness_clusters
   kl_filters:
     embedding: dino
     ablation: full_int
+  kl_ckpt_seed: 170
+
+figure4:
+  ckpt_median_seeds:
+    membrane_stiffness_clusters:
+      dino: 110
 
 sweeps:
   oscillation: oscillation_paper
-  tension: tension_clusters
+  membrane_stiffness: membrane_stiffness_clusters
   adhesion: diff_adhesion_ablations
 
 scale_only:
   experiment: scale
 
 embedding_kl_rate:
-  experiment: tension_clusters
+  experiment: membrane_stiffness_clusters
   filters:
     embedding: dino
     ablation: full_int
@@ -28,7 +34,7 @@ combined_params:
     experiment: osc_amp_x_adhesion_seeds20
     k: 4
   three_params:
-    experiment: osc_amp_x_adhesion_x_tension_kh1e5_seeds20
+    experiment: osc_amp_x_adhesion_x_membrane_stiffness_kh1e5_seeds20
     k: 8
 
 ctc:
@@ -46,7 +52,7 @@ arch_sweep:
 
 cell_dino:
   oscillation: oscillation_cell_dino
-  tension: tension_cell_dino
+  membrane_stiffness: membrane_stiffness_cell_dino
   adhesion: diff_adhesion_cell_dino
 
 seg_ablation:
@@ -67,3 +73,4 @@ grok_h64:
     training.rollout.schedule: "[[0, 1], [40, 2], [80, 4]]"
   early_epoch: 40
   late_epoch: 200
+  figure_seed: 40

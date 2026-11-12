@@ -13,21 +13,21 @@
 # -----------
 # Per encoder×ablation sweep (the exact `model.seed=range(...)` values are in
 # the commands below):
-#   oscillation_paper       dino_sp: 20 seeds, full ablation set (full+spatial+static+temporal)
-#                           fourier_32 / conv_256: 5 seeds, encoder-comparison ablations only
-#                                                 (spatial+static+temporal)
-#   tension_clusters        dino_sp: 20 seeds, full ablation set
-#                           fourier_32 / conv_256: 20 seeds, `full` ablation only
-#   diff_adhesion_ablations dino_sp: 20 seeds, full ablation set
-#                           fourier_32 / conv_256: 5 seeds, full ablation set
-#   combined parameters     20 seeds per dataset
-#   CTC DIC-HeLa x PSC      20 seeds
-#   grok (H = 64)           5 seeds
-#   architecture sweep      20 seeds per arm, 12 arms
-#   Cell-DINO               20 seeds per dataset
-#   segmentation ablation   10 seeds per level, 25 levels
-#   f_p ladder              20 seeds per f_p
-#   oscillation timescales  20 seeds
+#   oscillation_paper           dino_sp: 20 seeds, full ablation set (full+spatial+static+temporal)
+#                               fourier_32 / conv_256: 5 seeds, encoder-comparison ablations only
+#                                                     (spatial+static+temporal)
+#   membrane_stiffness_clusters dino_sp: 20 seeds, full ablation set
+#                               fourier_32 / conv_256: 20 seeds, `full` ablation only
+#   diff_adhesion_ablations     dino_sp: 20 seeds, full ablation set
+#                               fourier_32 / conv_256: 5 seeds, full ablation set
+#   combined parameters         20 seeds per dataset
+#   CTC DIC-HeLa x PSC          20 seeds
+#   grok (H = 64)               5 seeds
+#   architecture sweep          20 seeds per arm, 12 arms
+#   Cell-DINO                   20 seeds per dataset
+#   segmentation ablation       10 seeds per level, 25 levels
+#   f_p ladder                  20 seeds per f_p
+#   oscillation timescales      20 seeds
 
 set -euo pipefail
 
@@ -45,7 +45,7 @@ Sections (pass one or more):
   linear-cluster          Linear growth — cluster (Figure 1b / 2)
   linear-continuous       Linear growth — continuous (Figure 3 growth panel)
   oscillation-clusters    Oscillation — clusters (Figure 4 row 1, Figure 5 left)
-  tension                 Membrane tension (Figure 3 kl, Figure 4 row 2, Figure 5 middle)
+  membrane-stiffness      Membrane stiffness (Figure 3 kl, Figure 4 row 2, Figure 5 middle)
   adhesion                Differential adhesion (Figure 4 row 3, Figure 5 right)
   scale-only              Scale-only ablation (Supplementary: scale_only_supp.py)
   combined-params         Combined parameters (Table: complex cases, 2- and 3-parameter columns)
@@ -59,9 +59,9 @@ Sections (pass one or more):
 
 Figure aliases (run every section needed for the figure):
   fig2                    Figure 1b / 2     -> linear-cluster
-  fig3                    Figure 3          -> linear-continuous, tension, grok-h64
-  fig4                    Figure 4          -> oscillation-clusters, tension, adhesion
-  fig5                    Figure 5          -> oscillation-clusters, tension, adhesion
+  fig3                    Figure 3          -> linear-continuous, membrane-stiffness, grok-h64
+  fig4                    Figure 4          -> oscillation-clusters, membrane-stiffness, adhesion
+  fig5                    Figure 5          -> oscillation-clusters, membrane-stiffness, adhesion
                           (Fig 4 and 5 share trained models — run once for both.)
   scale-only-supp         Supp scale-only   -> scale-only
 
@@ -175,14 +175,14 @@ run_oscillation_clusters() {
 }
 
 ##############################################################################
-# Membrane tension (Figure 3 kl panel, Figure 4 row 2, Figure 5 middle panel)
+# Membrane stiffness (Figure 3 kl panel, Figure 4 row 2, Figure 5 middle panel)
 ##############################################################################
-run_tension() {
+run_membrane_stiffness() {
     # dino_sp — 20 seeds across the full ablation set.
     python train.py -m \
         model=history \
-        +experiment=tension_two_clusters \
-        +experiment_name=tension_clusters \
+        +experiment=membrane_stiffness_two_clusters \
+        +experiment_name=membrane_stiffness_clusters \
         +embedding=dino_sp \
         '+ablation/int=glob(*)' \
         training.rollout.enabled=false \
@@ -192,8 +192,8 @@ run_tension() {
     # fourier_32 / conv_256 — 20 seeds, full ablation only.
     python train.py -m \
         model=history \
-        +experiment=tension_two_clusters \
-        +experiment_name=tension_clusters \
+        +experiment=membrane_stiffness_two_clusters \
+        +experiment_name=membrane_stiffness_clusters \
         +embedding=fourier_32,conv_256 \
         +ablation/int=full \
         training.rollout.enabled=false \
@@ -203,8 +203,8 @@ run_tension() {
     # fourier_32 / conv_256 — 5 seeds, encoder-comparison ablations only.
     python train.py -m \
         model=history \
-        +experiment=tension_two_clusters \
-        +experiment_name=tension_clusters \
+        +experiment=membrane_stiffness_two_clusters \
+        +experiment_name=membrane_stiffness_clusters \
         +embedding=fourier_32,conv_256 \
         +ablation/int=static,spatial,temporal \
         training.rollout.enabled=false \
@@ -252,7 +252,7 @@ run_adhesion() {
 run_scale_only() {
     python train.py -m \
         model=history \
-        +experiment=differential_adhesion_clusters,more_osc_clusters,tension_two_clusters \
+        +experiment=differential_adhesion_clusters,more_osc_clusters,membrane_stiffness_two_clusters \
         +experiment_name=scale \
         +embedding=dino_sp \
         +ablation=scale_only \
@@ -267,7 +267,7 @@ run_scale_only() {
 ##############################################################################
 # Combined parameters (Table: complex cases, two- and three-parameter columns)
 ##############################################################################
-# Scored by paper_figures/combined_params_table.py.
+# Scored by paper_figures/complex_cases_table.py.
 run_combined_params() {
     # 2 oscillation amplitudes x 2 adhesion strengths (k = 4).
     python train.py -m \
@@ -280,10 +280,10 @@ run_combined_params() {
         dataloader.gpu_cache_memory=60GB \
         model.seed=range\(0,20\)
 
-    # 2 amplitudes x 2 adhesion strengths x 2 membrane tensions (k = 8).
+    # 2 amplitudes x 2 adhesion strengths x 2 membrane stiffnesses (k = 8).
     python train.py -m \
-        +experiment=osc_amp_x_adhesion_x_tension_kh1e5 \
-        +experiment_name=osc_amp_x_adhesion_x_tension_kh1e5_seeds20 \
+        +experiment=osc_amp_x_adhesion_x_membrane_stiffness_kh1e5 \
+        +experiment_name=osc_amp_x_adhesion_x_membrane_stiffness_kh1e5_seeds20 \
         +embedding=dino_sp \
         +ablation=full_no_history \
         model.embedding_dim=32 \
@@ -297,7 +297,7 @@ run_combined_params() {
 ##############################################################################
 # Needs the two CTC training datasets under real_cell_data/ (see README). The
 # recipe (embedding_dim 16, 800 epochs, batch size 2) lives in the experiment
-# config. Scored by paper_figures/ctc_table.py.
+# config. Scored by paper_figures/complex_cases_table.py.
 run_ctc() {
     python train.py -m \
         +experiment=real_dic_psc_late \
@@ -370,8 +370,8 @@ run_cell_dino() {
 
     python train.py -m \
         model=history \
-        +experiment=tension_two_clusters \
-        +experiment_name=tension_cell_dino \
+        +experiment=membrane_stiffness_two_clusters \
+        +experiment_name=membrane_stiffness_cell_dino \
         +embedding=cell_dino \
         +ablation/int=full \
         training.rollout.enabled=false \
@@ -467,13 +467,13 @@ run_fig2() {
 
 run_fig3() {
     run_linear_continuous
-    run_tension
+    run_membrane_stiffness
     run_grok_h64
 }
 
 run_fig4() {
     run_oscillation_clusters
-    run_tension
+    run_membrane_stiffness
     run_adhesion
 }
 
@@ -491,7 +491,7 @@ run_all() {
     run_linear_cluster
     run_linear_continuous
     run_oscillation_clusters
-    run_tension
+    run_membrane_stiffness
     run_adhesion
     run_scale_only
     run_combined_params
@@ -538,7 +538,7 @@ for target in "${TARGETS[@]}"; do
         linear-cluster)         run_linear_cluster ;;
         linear-continuous)      run_linear_continuous ;;
         oscillation-clusters)   run_oscillation_clusters ;;
-        tension)                run_tension ;;
+        membrane-stiffness)     run_membrane_stiffness ;;
         adhesion)               run_adhesion ;;
         scale-only)             run_scale_only ;;
         combined-params)        run_combined_params ;;

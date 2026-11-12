@@ -279,7 +279,7 @@ class TestPlanning:
 
         Under `loss_mask_mode: strict` an invalid frame kills three transitions
         (t-1, t, t+1), so two invalid frames within 2 of each other cost less
-        than two isolated ones — and on the tension cache that clustering was
+        than two isolated ones — and on the membrane_stiffness cache that clustering was
         label-correlated at r = +0.265 while the counts themselves were
         perfectly balanced. MIN_EPISODE_GAP makes the +-1 windows disjoint, so
         the cost is exactly 3 per single-frame event for every slot.

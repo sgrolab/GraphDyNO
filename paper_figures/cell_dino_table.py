@@ -1,10 +1,10 @@
 """Table tab:encoder — Cell-DINO against DINOv3 (and Conv / Fourier) on the
-oscillation, membrane-stiffness (tension) and differential-adhesion datasets.
+oscillation, membrane-stiffness and differential-adhesion datasets.
 
-Uses figure 4's metric functions verbatim (`_load_emb_meta`, `_normalize_emb`,
+Uses figure 4's metric functions verbatim (`load_emb_meta`, `_normalize_emb`,
 `_recovery_ari`), so every column is directly comparable to figure 4's ARI
 panels: k-means ARI at known k on each dataset's primary factor
-(oscillation `area_fluct_amps`, k = 4; tension `kls`, k = 2; adhesion `khs`,
+(oscillation `area_fluct_amps`, k = 4; stiffness `kls`, k = 2; adhesion `khs`,
 k = 2), FINAL checkpoint, ablation full_int, median [IQR] over seeds, plus
 two-sided Welch and Mann-Whitney U tests of Cell-DINO against DINOv3.
 
@@ -31,13 +31,13 @@ matplotlib.use("Agg")
 matplotlib.rcParams["pdf.fonttype"] = 42  # embed TrueType, not Type 3
 matplotlib.rcParams["font.family"] = "DejaVu Sans"
 import matplotlib.pyplot as plt
-import mlflow
 import numpy as np
 from scipy import stats
 
 import figure4
+from _ckpt_store import add_source_args, apply_source_args
 from _combo_common import TEX_IQR_DEFS, fmt_iqr, quartiles, tex_iqr
-from _run_lookup import load_experiments_yaml
+from _run_lookup import load_emb_meta, load_experiments_yaml, search_runs
 
 ABLATION = "full_int"
 ENCODERS = ["cell_dino", "dino", "conv", "fourier"]
@@ -47,20 +47,19 @@ LABELS = {"cell_dino": "Cell-DINO", "dino": "DINO", "conv": "Conv",
 
 DATASETS = [
     ("oscillation", "Oscillation", 0, "oscillation_cell_dino"),
-    ("tension", "Membrane stiffness", 1, "tension_cell_dino"),
+    ("membrane_stiffness", "Membrane stiffness", 1, "membrane_stiffness_cell_dino"),
     ("adhesion", "Differential adhesion", 2, "diff_adhesion_cell_dino"),
 ]
 
 
 def _collect(experiment_name, param_filters, keep_embeddings):
     """FINISHED full_int runs from one experiment, grouped by encoder tag."""
-    exps = [e.experiment_id for e in figure4.client.search_experiments()
-            if e.name == experiment_name]
+    runs = search_runs(experiment_name)
     out = {e: [] for e in keep_embeddings}
-    if not exps:
+    if runs is None:
         print(f"  [{experiment_name}] not found in MLflow")
         return out
-    for r in mlflow.search_runs(experiment_ids=exps, output_format="list"):
+    for r in runs:
         if r.info.status != "FINISHED" or r.data.tags.get("ablation") != ABLATION:
             continue
         e = r.data.tags.get("embedding")
@@ -90,7 +89,7 @@ def score(spec, cell_experiment):
     for enc in ENCODERS:
         seeds = []
         for r in runs_by_enc.get(enc, []):
-            emb, meta = figure4._load_emb_meta(r)
+            emb, meta = load_emb_meta(r)
             if emb is None or primary not in meta:
                 continue
             ari = figure4._recovery_ari(emb, meta[primary])
@@ -200,7 +199,8 @@ def main():
         ap.add_argument(f"--{key}-experiment", default=cfg.get(key, default),
                         help=f"MLflow experiment with the Cell-DINO {key} runs")
     ap.add_argument("--save-dir", default="figures")
-    args = ap.parse_args()
+    add_source_args(ap)
+    args = apply_source_args(ap.parse_args())
     save_dir = Path(args.save_dir)
     save_dir.mkdir(parents=True, exist_ok=True)
 

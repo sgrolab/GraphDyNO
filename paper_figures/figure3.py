@@ -22,6 +22,7 @@ from sklearn.feature_selection import mutual_info_regression
 
 from graph_dyno.plotting.plot import load_run
 
+from _ckpt_store import add_source_args, apply_source_args, ckpt_root
 from _grok_common import EARLY, LATE, pick_snapshots
 from _run_lookup import (  # noqa: E402  (importing from sibling after sys.path tweak)
     find_run_in_experiment,
@@ -39,13 +40,13 @@ def _resolve_run(*, run_name=None, experiment=None,
                  tag_filters=None, param_filters=None,
                  use_last=False):
     """Pick a run by explicit name or by experiment lookup."""
-    if run_name:
+    if run_name and ckpt_root() is None:
         return load_run(run_name, use_last=use_last)
     if experiment:
         return find_run_in_experiment(
             experiment, metric=metric, direction=direction,
             tag_filters=tag_filters, param_filters=param_filters,
-            use_last=use_last,
+            use_last=use_last, run_name=run_name,
         )
     raise ValueError("Must specify a run name or an experiment name.")
 
@@ -431,14 +432,17 @@ def _parse_args():
     # Explicit run-name overrides for picking a specific seed/run.
     p.add_argument("--growth-run", default=None)
     p.add_argument("--grok-run", default=None,
-                   help="H = 64 run for row 2 (default: lowest model.seed)")
+                   help="H = 64 run for row 2 (default: grok_h64.figure_seed)")
     p.add_argument("--kl-run", default=None)
     p.add_argument("--early", type=int, default=EARLY, help="snapshot epoch for panel d")
     p.add_argument("--late", type=int, default=LATE, help="snapshot epoch for panels e, f")
     p.add_argument("--output", default="./figures/combined_embedding_figure.png")
     p.add_argument("--dpi", type=int, default=300)
-    args = p.parse_args()
+    add_source_args(p)
+    args = apply_source_args(p.parse_args())
     args.kl_filters = cfg.get("kl_filters")
+    if ckpt_root() is not None and args.kl_run is None and cfg.get("kl_ckpt_seed") is not None:
+        args.kl_run = f"seed_{cfg['kl_ckpt_seed']}"
     return args
 
 

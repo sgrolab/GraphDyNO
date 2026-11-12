@@ -2,7 +2,7 @@
 
 Layout (2x2):
     (a) osc. growth — embedding scatter colored by α
-    (b) membrane tension — embedding scatter colored by k_ℓ
+    (b) membrane stiffness — embedding scatter colored by k_ℓ
     (c) differential adhesion — embedding scatter colored by k_h
     (d) ARI bar chart comparing kMeans recovery across the three datasets
 """
@@ -10,11 +10,9 @@ Layout (2x2):
 import argparse
 import sys
 from pathlib import Path
-from urllib.parse import urlparse
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import mlflow
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -27,10 +25,11 @@ from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
 
 ROOT = Path(__file__).resolve().parents[1]
 from _combo_common import TEX_IQR_DEFS, fmt_iqr, tex_iqr  # noqa: E402
-from _run_lookup import load_experiments_yaml, setup_mlflow_uri  # noqa: E402
+from _ckpt_store import CkptRun, add_source_args, apply_source_args, ckpt_path  # noqa: E402
+from _run_lookup import (load_emb_meta, load_experiments_yaml,  # noqa: E402
+                         search_runs, setup_mlflow_uri)
 
 setup_mlflow_uri()
-client = mlflow.tracking.MlflowClient()
 _SCALE_CFG = load_experiments_yaml().get("scale_only", {})
 SCALE_EXPERIMENT = _SCALE_CFG.get("experiment", "scale")
 
@@ -59,13 +58,13 @@ SPECS = [
         bar_label="Osc.",
     ),
     dict(
-        cache_dir_suffix="tension_two_clusters_cache/",
+        cache_dir_suffix="membrane_stiffness_two_clusters_cache/",
         primary="kls",
         colorbar_label=r"$k_\ell$",
         colorbar_tick_override=[r"$10^3$", r"$10^6$"],
         palette_slice=_CB[0:2],
-        panel_title="Membrane tension",
-        bar_label="Tension",
+        panel_title="Membrane stiffness",
+        bar_label="Stiffness",
     ),
     dict(
         cache_dir_suffix="differential_adhesion_clusters_cache/",
@@ -94,30 +93,6 @@ def _categorical_cmap(vals, palette_slice, max_categories=None):
         tick_vals = 0.5 * (edges[:-1] + edges[1:])
         tick_positions = np.arange(cap)
     return cat, cmap, tick_positions, tick_vals
-
-
-def _run_dir(run):
-    art = Path(urlparse(run.info.artifact_uri).path)
-    if (art / "graph_decoder_model.pth").exists():
-        return art
-    hdir = run.data.tags.get("hydra_output_dir")
-    if hdir and (Path(hdir) / "graph_decoder_model.pth").exists():
-        return Path(hdir)
-    return None
-
-
-def _load_emb_meta(run):
-    rdir = _run_dir(run)
-    if rdir is None:
-        return None, None
-    sd = torch.load(
-        rdir / "graph_decoder_model.pth", map_location="cpu", weights_only=False
-    )
-    emb = sd["parameter_embedding"].numpy()
-    meta = {
-        k[len("_meta_") :]: sd[k].numpy() for k in sd if k.startswith("_meta_")
-    }
-    return emb, meta
 
 
 def _normalize_emb(emb):
@@ -177,13 +152,8 @@ def _compute_metrics(emb, target):
 
 
 def _fetch_runs_for_spec(spec):
-    exps = [
-        e.experiment_id
-        for e in client.search_experiments()
-        if e.name == SCALE_EXPERIMENT
-    ]
-    assert exps, f"No experiment named {SCALE_EXPERIMENT!r}"
-    runs = mlflow.search_runs(experiment_ids=exps, output_format="list")
+    runs = search_runs(SCALE_EXPERIMENT)
+    assert runs is not None, f"No experiment named {SCALE_EXPERIMENT!r}"
     out = []
     for r in runs:
         if r.info.status != "FINISHED":
@@ -197,6 +167,17 @@ def _fetch_runs_for_spec(spec):
     return out
 
 
+def _fig_seed(runs, primary):
+    """The scatter panel's (ARI, embedding, values) from an export's fig_seed.pt, or None."""
+    paths = {ckpt_path(r, "fig_seed") for r in runs if isinstance(r, CkptRun)} - {None}
+    if not paths:
+        return None
+    sd = torch.load(paths.pop(), map_location="cpu", weights_only=False)
+    emb = sd["parameter_embedding"].numpy()
+    vals = sd[f"_meta_{primary}"].numpy()
+    return _compute_metrics(emb, vals)["ARI_kmeans"], _normalize_emb(emb), vals
+
+
 def _build_spec_data(spec):
     runs = _fetch_runs_for_spec(spec)
     primary = spec["primary"]
@@ -204,7 +185,7 @@ def _build_spec_data(spec):
     seeds = []
     rows = []
     for r in runs:
-        emb, meta = _load_emb_meta(r)
+        emb, meta = load_emb_meta(r)
         if emb is None or primary not in meta:
             continue
         metrics = _compute_metrics(emb, meta[primary])
@@ -220,6 +201,9 @@ def _build_spec_data(spec):
         aris = np.array([s[0] for s in seeds])
         idx = int(np.argmin(np.abs(aris - np.mean(aris))))
         chosen = seeds[idx]
+    pinned = _fig_seed(runs, primary)
+    if pinned is not None:
+        chosen = pinned
 
     df = pd.DataFrame(rows)
     return chosen, df
@@ -378,7 +362,8 @@ def _parse_args():
     p.add_argument("--save-dir", default="./figures")
     p.add_argument("--experiment", default=SCALE_EXPERIMENT,
                    help="MLflow experiment name (default: from experiments.yaml).")
-    args = p.parse_args()
+    add_source_args(p)
+    args = apply_source_args(p.parse_args())
     SCALE_EXPERIMENT = args.experiment
     return args
 

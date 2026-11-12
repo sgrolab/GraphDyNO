@@ -249,7 +249,7 @@ def _log_seg_stats(seg_stats):
     Realized, not requested: the planner drops an episode when no free window
     exists for both roles, and on a sparsely-connected cache (measured: 1.8
     union-distinct partners per cell on more_osc_clusters against 22-25 on
-    tension/adhesion) that shortfall is the difference between "we ablated 5%"
+    membrane_stiffness/adhesion) that shortfall is the difference between "we ablated 5%"
     and "we ablated what the contact graph allowed".
     """
     flat = {}

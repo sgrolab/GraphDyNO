@@ -22,15 +22,16 @@ from collections import defaultdict
 from pathlib import Path
 from urllib.parse import urlparse
 
-import mlflow
 import numpy as np
 import torch
 from scipy.spatial import KDTree
 from sklearn.cluster import HDBSCAN, KMeans
 from sklearn.metrics import adjusted_rand_score
 
+from _ckpt_store import (CkptRun, add_source_args, apply_source_args, ckpt_path,
+                         ckpt_root)
 from _combo_common import fmt_iqr
-from _run_lookup import load_experiments_yaml, setup_mlflow_uri
+from _run_lookup import load_experiments_yaml, search_runs, setup_mlflow_uri
 
 FACTOR = "khs"
 N_BINS = 20        # figure4's cap on label bins
@@ -50,13 +51,18 @@ def run_dir(run):
 
 
 def load_emb_meta(run, which):
-    rdir = run_dir(run)
-    if rdir is None:
-        return None, None
-    path = rdir / ("graph_decoder_model.pth" if which == "final"
-                   else "graph_decoder_model_best.pth")
-    if not path.exists():          # fall back rather than drop the arm
-        path = rdir / "graph_decoder_model.pth"
+    if isinstance(run, CkptRun):
+        path = ckpt_path(run, which) or ckpt_path(run, "final")
+        if path is None:
+            return None, None
+    else:
+        rdir = run_dir(run)
+        if rdir is None:
+            return None, None
+        path = rdir / ("graph_decoder_model.pth" if which == "final"
+                       else "graph_decoder_model_best.pth")
+        if not path.exists():          # fall back rather than drop the arm
+            path = rdir / "graph_decoder_model.pth"
     sd = torch.load(path, map_location="cpu", weights_only=False)
     emb = sd["parameter_embedding"].numpy()
     meta = {k[len("_meta_"):]: sd[k].numpy() for k in sd if k.startswith("_meta_")}
@@ -110,12 +116,11 @@ def arm_of(run):
 
 
 def collect(experiment, which, by_arm, *, arm=None, embedding=None, ablation=None):
-    client = mlflow.tracking.MlflowClient()
-    exps = [e.experiment_id for e in client.search_experiments() if e.name == experiment]
-    if not exps:
+    runs = search_runs(experiment)
+    if runs is None:
         print(f"  [{experiment}] not found in MLflow")
         return
-    for r in mlflow.search_runs(experiment_ids=exps, output_format="list"):
+    for r in runs:
         if r.info.status != "FINISHED":
             continue
         if embedding and r.data.tags.get("embedding") != embedding:
@@ -147,7 +152,10 @@ def main():
                     default=cfg.get("sweeps", {}).get("adhesion", "diff_adhesion_ablations"),
                     help="the paper's adhesion experiment (the fp = 50 arm)")
     ap.add_argument("--checkpoint", default="final", choices=["final", "best"])
-    args = ap.parse_args()
+    add_source_args(ap)
+    args = apply_source_args(ap.parse_args())
+    if args.checkpoint == "best" and ckpt_root() is not None:
+        raise SystemExit("--checkpoint best: the exported checkpoints are final only.")
     print(f"tracking uri: {setup_mlflow_uri()}")
 
     by_arm = defaultdict(list)

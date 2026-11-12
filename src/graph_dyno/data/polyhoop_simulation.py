@@ -658,7 +658,7 @@ class PolyhoopSimulation:
         self.kl_fluct_phases = torch.tensor(kl_phase_np, device=self.device, dtype=torch.float32)
         self.kh_fluct_phases = torch.tensor(kh_phase_np, device=self.device, dtype=torch.float32)
 
-        # Set per-polygon fluctuation, tension, and elongation values
+        # Set per-polygon fluctuation, line tension, membrane stiffness, and elongation values
         for i in range(self.n_polygons):
             poly = self.ensemble.get_polygon(i)
             poly.area_fluct_period = float(self.area_fluct_periods[i])

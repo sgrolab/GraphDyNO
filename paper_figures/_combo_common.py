@@ -58,15 +58,16 @@ def fmt_iqr(vals, prec=3):
     return f"{_num(md, prec)} [{_num(q1, prec)}, {_num(q3, prec)}]"
 
 
-def tex_iqr(vals, prec=2, bold=False):
+def tex_iqr(vals, prec=2, bold=False, macro="iqr"):
     r"""LaTeX cell `$\iqr{median}{Q1}{Q3}$` (the paper's macro); `--` when there are no values.
 
-    bold marks a significant entry ({\boldmath ...}).
+    bold marks a significant entry ({\boldmath ...}). macro names a different
+    three-argument macro, e.g. "iqrv" for tab:complex_cases.
     """
     q1, md, q3 = quartiles(vals)
     if not np.isfinite(md):
         return "--"
-    cell = f"$\\iqr{{{_num(md, prec)}}}{{{_num(q1, prec)}}}{{{_num(q3, prec)}}}$"
+    cell = f"$\\{macro}{{{_num(md, prec)}}}{{{_num(q1, prec)}}}{{{_num(q3, prec)}}}$"
     return f"{{\\boldmath{cell}}}" if bold else cell
 
 

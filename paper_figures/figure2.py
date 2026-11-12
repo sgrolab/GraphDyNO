@@ -40,6 +40,7 @@ from train import _load_companion_embeddings, _precompute_bottlenecks
 from graph_dyno.data.trajectory_generator import generate_config_hash, generate_data
 from graph_dyno.precompute.precompute_embeddings import precompute_all, precompute_sdfs
 
+from _ckpt_store import add_source_args, apply_source_args, ckpt_root  # noqa: E402
 from _run_lookup import (  # noqa: E402  (importing from sibling after sys.path tweak)
     find_run_in_experiment,
     load_experiments_yaml,
@@ -803,12 +804,15 @@ def _parse_args():
     p.add_argument("--cmap", default=CMAP)
     p.add_argument("--output", default=OUTPUT_PATH)
     p.add_argument("--dpi", type=int, default=DPI)
-    return p.parse_args()
+    add_source_args(p)
+    return apply_source_args(p.parse_args())
 
 
 if __name__ == "__main__":
     setup_mlflow_uri()
     args = _parse_args()
+    if ckpt_root() is not None:
+        raise SystemExit("figure2.py rolls out a full MLflow run; it can't run from exported checkpoints.")
     make_figure(
         run_name=args.run_name,
         experiment=args.experiment,

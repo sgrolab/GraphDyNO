@@ -7,7 +7,6 @@ __pycache__/
 .venv/
 
 # Data directories
-/data/
 experiments/
 multirun/
 plots/
@@ -36,3 +35,7 @@ dino/cell_masks/
 # MLflow files
 mlruns/
 mlflow.db
+
+# Cell Tracking Challenge data: not redistributable, download per README
+/real_cell_data/*
+!/real_cell_data/CTC_DATA_FORMAT.md

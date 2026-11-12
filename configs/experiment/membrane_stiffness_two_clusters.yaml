@@ -7,7 +7,7 @@ data:
   image_size: 128
   n_objects: 600
   generator:
-    cache_dir: ${oc.env:DATA_DIR,./data}/tension_two_clusters_cache/
+    cache_dir: ${oc.env:DATA_DIR,./data}/membrane_stiffness_two_clusters_cache/
     n_trajectories: 3
     trajectory_length: 2000
     seed_offset: 1

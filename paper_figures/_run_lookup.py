@@ -10,7 +10,7 @@ Usage:
 
     setup_mlflow_uri()
     run = find_run_in_experiment(
-        "tension_clusters",
+        "membrane_stiffness_clusters",
         tag_filters={"embedding": "dino", "ablation": "full_int"},
         metric="best_val_loss",
     )
@@ -22,9 +22,13 @@ import os
 import sys
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 import mlflow
+import torch
 import yaml
+
+from _ckpt_store import CkptRun, StateDictView, ckpt_path, ckpt_root, list_runs
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -55,6 +59,80 @@ def load_experiments_yaml() -> dict:
     return yaml.safe_load(p.read_text()) or {}
 
 
+def search_runs(experiment_name: str):
+    """Every run of one experiment, or None if there is no such experiment."""
+    if ckpt_root() is not None:
+        return list_runs(experiment_name)
+    client = mlflow.tracking.MlflowClient()
+    exps = [e.experiment_id for e in client.search_experiments()
+            if e.name == experiment_name]
+    if not exps:
+        return None
+    return mlflow.search_runs(experiment_ids=exps, output_format="list")
+
+
+def load_emb_meta(run):
+    """(parameter_embedding, {meta key: array}) from a run's final checkpoint."""
+    if isinstance(run, CkptRun):
+        path = ckpt_path(run, "final")
+    else:
+        art = Path(urlparse(run.info.artifact_uri).path)
+        hdir = run.data.tags.get("hydra_output_dir")
+        if (art / "graph_decoder_model.pth").exists():
+            path = art / "graph_decoder_model.pth"
+        elif hdir and (Path(hdir) / "graph_decoder_model.pth").exists():
+            path = Path(hdir) / "graph_decoder_model.pth"
+        else:
+            path = None
+    if path is None:
+        return None, None
+    sd = torch.load(path, map_location="cpu", weights_only=False)
+    emb = sd["parameter_embedding"].numpy()
+    meta = {k[len("_meta_"):]: sd[k].numpy()
+            for k in sd if k.startswith("_meta_")}
+    if "area_fluct_periods" in meta and "area_fluct_amps" in meta:
+        meta["area_fluct_amp_x_period"] = (
+            meta["area_fluct_periods"] * meta["area_fluct_amps"])
+    return emb, meta
+
+
+def _ckpt_matches(run, tag_filters, param_filters):
+    """Exact match, skipping keys the export layout doesn't define."""
+    for filters, source in ((tag_filters, run.data.tags),
+                            (param_filters, run.data.params)):
+        for key, expected in (filters or {}).items():
+            if key in source and str(source[key]) != str(expected):
+                return False
+    return True
+
+
+def _ckpt_find_run(experiment_name, *, metric, tag_filters, param_filters,
+                   use_last, run_name):
+    runs = find_runs_in_experiment(experiment_name, tag_filters=tag_filters,
+                                   param_filters=param_filters)
+    if run_name:
+        runs = [r for r in runs if r.info.run_name == run_name]
+    if not runs:
+        raise ValueError(
+            f"No checkpoints of '{experiment_name}' under {ckpt_root()} match "
+            f"tags={tag_filters} params={param_filters} run={run_name}.")
+    if metric is None or run_name:
+        chosen = runs[0]
+    else:
+        chosen = min(runs, key=lambda r: r.info.start_time)
+        if len(runs) > 1:
+            print(f"  WARNING: checkpoints carry no `{metric}`; using the lowest "
+                  f"seed of {len(runs)} in '{experiment_name}' "
+                  f"({chosen.info.run_name}). Pass a seed_<N> run name to choose.")
+    which = "final" if use_last else "best"
+    path = ckpt_path(chosen, which)
+    if path is None:
+        raise ValueError(f"'{experiment_name}' {chosen.info.run_name}: the export "
+                         f"holds no {which} checkpoint.")
+    return {"model": StateDictView(torch.load(path, map_location="cpu",
+                                              weights_only=False))}
+
+
 def find_run_in_experiment(
     experiment_name: str,
     *,
@@ -64,6 +142,7 @@ def find_run_in_experiment(
     param_filters: Optional[dict] = None,
     use_last: bool = False,
     status: str = "FINISHED",
+    run_name: Optional[str] = None,
 ) -> dict:
     """Return the loaded `run` dict (per `plot.load_run`) for one MLflow run.
 
@@ -76,7 +155,14 @@ def find_run_in_experiment(
        recent run.
 
     Raises ValueError if no run matches.
+
+    From a checkpoint tree, the lowest seed stands in for a metric and the
+    model is a `StateDictView`; `run_name` (seed_<N>) picks a run.
     """
+    if ckpt_root() is not None:
+        return _ckpt_find_run(experiment_name, metric=metric,
+                              tag_filters=tag_filters, param_filters=param_filters,
+                              use_last=use_last, run_name=run_name)
     client = mlflow.tracking.MlflowClient()
     exp = client.get_experiment_by_name(experiment_name)
     if exp is None:
@@ -137,6 +223,9 @@ def find_runs_in_experiment(
     status: str = "FINISHED",
 ) -> list:
     """Return raw mlflow Run objects matching the filters (no load_run)."""
+    if ckpt_root() is not None:
+        return [r for r in list_runs(experiment_name) or []
+                if _ckpt_matches(r, tag_filters, param_filters)]
     client = mlflow.tracking.MlflowClient()
     exp = client.get_experiment_by_name(experiment_name)
     if exp is None:

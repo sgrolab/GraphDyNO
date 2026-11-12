@@ -11,7 +11,7 @@ data:
     n_trajectories: 3
     trajectory_length: 2000
     seed_offset: 42
-    cache_dir: ${oc.env:DATA_DIR,./data}/osc_amp_x_adhesion_x_tension_kh1e5_cache/
+    cache_dir: ${oc.env:DATA_DIR,./data}/osc_amp_x_adhesion_x_membrane_stiffness_kh1e5_cache/
   params:
     radius: 2.0
 

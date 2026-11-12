@@ -20,8 +20,10 @@ from urllib.parse import urlparse
 
 import numpy as np
 import torch
+import yaml
 
 import figure4
+from _ckpt_store import REPO_ROOT, CkptRun, ckpt_path
 from _combo_common import nc
 from _run_lookup import find_runs_in_experiment
 
@@ -40,6 +42,8 @@ BEST = "graph_decoder_model_best.pth"
 
 def checkpoint(run, name=FINAL):
     """Path of one of a run's checkpoints (artifact dir, else hydra dir)."""
+    if isinstance(run, CkptRun):
+        return ckpt_path(run, {FINAL: "final", BEST: "best"}[name])
     for base in (Path(urlparse(run.info.artifact_uri).path),
                  Path(run.data.tags.get("hydra_output_dir", "/nonexistent"))):
         p = base / name
@@ -81,12 +85,29 @@ def realized(run):
                 if re.fullmatch(pattern, k) and v not in (None, "None")]
         return float(np.mean(vals)) if vals else 0.0
 
-    out = {kind: mean_of(rf"segabl\.t\d+\.{kind}\.realized_rate")
-           for kind in RATE_KINDS}
+    if isinstance(run, CkptRun):
+        rates = requested_rates()[run.data.tags["seg_ablation"]]
+        out = {kind: rates.get(kind, 0.0) for kind in RATE_KINDS}
+    else:
+        out = {kind: mean_of(rf"segabl\.t\d+\.{kind}\.realized_rate")
+               for kind in RATE_KINDS}
     # Segmentation cell-frames: `merge` counts twice (the absorber gets the
     # blob, the partner goes invalid) and `id_swap` is a tracking error.
     out["seg_rate"] = float(out["partial"] + out["scale"] + out["miss"]
                             + 2.0 * out["merge"])
+    return out
+
+
+@lru_cache(maxsize=None)
+def requested_rates():
+    """{tags.seg_ablation: {kind: requested rate}} from configs/seg_ablation."""
+    out = {}
+    for p in sorted((REPO_ROOT / "configs" / "seg_ablation").glob("*.yaml")):
+        cfg = yaml.safe_load(p.read_text())
+        lvl = (cfg.get("tags") or {}).get("seg_ablation")
+        if lvl is not None:
+            out[lvl] = {k: float(v["rate"])
+                        for k, v in cfg["seg_ablation"]["kinds"].items()}
     return out
 
 

@@ -3,8 +3,9 @@
 This folder holds the two **training** datasets (raw images + full annotations) the paper
 uses from the [Cell Tracking Challenge](https://celltrackingchallenge.net/2d-datasets/)
 (Ulman et al. 2017, *Nat. Methods*; Maška et al. 2023, *Nat. Methods*): DIC-C2DH-HeLa and
-PhC-C2DL-PSC. Only their `man_track.txt` files are versioned here — unzip the two training
-zips into this folder to get the images and masks (see the README). Test/challenge zips
+PhC-C2DL-PSC. None of the data is versioned here, since the CTC terms do not allow
+redistribution. Unzip the two training zips into this folder to get the images, masks,
+and `man_track.txt` lineage tables (see the README for the commands). Test/challenge zips
 (raw images only, annotations withheld) are not needed: no ground truth in them.
 
 ```

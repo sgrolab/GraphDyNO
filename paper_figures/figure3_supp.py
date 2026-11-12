@@ -17,6 +17,7 @@ import seaborn as sns
 from sklearn.linear_model import LinearRegression
 
 from figure3 import _projection_correlation
+from _ckpt_store import add_source_args, apply_source_args
 from _grok_common import EARLY, LATE, pick_snapshots
 from _run_lookup import setup_mlflow_uri
 
@@ -127,12 +128,13 @@ def _parse_args():
     p.add_argument("--grok-experiment", default=None,
                    help="H = 64 experiment (default: grok_h64 in experiments.yaml)")
     p.add_argument("--grok-run", default=None,
-                   help="Explicit MLflow run name (default: lowest model.seed).")
+                   help="Explicit MLflow run name (default: grok_h64.figure_seed).")
     p.add_argument("--early", type=int, default=EARLY, help="snapshot epoch for row 0")
     p.add_argument("--late", type=int, default=LATE, help="snapshot epoch for row 1")
     p.add_argument("--output", default="./figures/figure3_supp.png")
     p.add_argument("--dpi", type=int, default=300)
-    return p.parse_args()
+    add_source_args(p)
+    return apply_source_args(p.parse_args())
 
 
 if __name__ == "__main__":

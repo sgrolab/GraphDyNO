@@ -15,7 +15,7 @@ def get_tensor_memory_bytes(tensor: torch.Tensor) -> int:
     Sparse COO tensors are charged for their indices + values, not for the
     dense element count: `nelement()` on a sparse (T, N, N) tensor returns
     T*N*N, which charged W_interactions 720 MB against a true 102 MB on the
-    tension cache. Correcting it only lowers the GPU-cache estimate, which is
+    membrane_stiffness cache. Correcting it only lowers the GPU-cache estimate, which is
     the safe direction.
 
     Args:

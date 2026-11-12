@@ -8,22 +8,20 @@ full). Color schemes match figure4v2.py.
 import argparse
 import sys
 from pathlib import Path
-from urllib.parse import urlparse
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-import mlflow
 import seaborn as sns
-import torch
 from matplotlib.colors import ListedColormap
 from scipy.spatial import KDTree
 
 ROOT = Path(__file__).resolve().parents[1]
-from _run_lookup import load_experiments_yaml, setup_mlflow_uri  # noqa: E402
+from _ckpt_store import add_source_args, apply_source_args  # noqa: E402
+from _run_lookup import (load_emb_meta, load_experiments_yaml,  # noqa: E402
+                         search_runs, setup_mlflow_uri)
 
 setup_mlflow_uri()
-client = mlflow.tracking.MlflowClient()
 _EXPERIMENTS_CFG = load_experiments_yaml().get("sweeps", {})
 
 EMBEDDINGS = ["dino", "conv", "fourier"]
@@ -44,7 +42,7 @@ SPECS = [
          colorbar_label=r"$\alpha$",
          palette_slice=_CB[2:10],
          colorbar_tick_override=None),
-    dict(experiment=_EXPERIMENTS_CFG.get("tension", "tension_clusters"),
+    dict(experiment=_EXPERIMENTS_CFG.get("membrane_stiffness", "membrane_stiffness_clusters"),
          filters={},
          primary="kls",
          colorbar_label=r"$k_\ell$",
@@ -60,31 +58,6 @@ SPECS = [
 
 _SEED_PARAM_NAMES = ("seed", "training.seed", "model.seed", "p.seed",
                      "data.seed", "dataloader.seed")
-
-
-def _run_dir(run):
-    art = Path(urlparse(run.info.artifact_uri).path)
-    if (art / "graph_decoder_model.pth").exists():
-        return art
-    hdir = run.data.tags.get("hydra_output_dir")
-    if hdir and (Path(hdir) / "graph_decoder_model.pth").exists():
-        return Path(hdir)
-    return None
-
-
-def _load_emb_meta(run):
-    rdir = _run_dir(run)
-    if rdir is None:
-        return None, None
-    sd = torch.load(rdir / "graph_decoder_model.pth",
-                    map_location="cpu", weights_only=False)
-    emb = sd["parameter_embedding"].numpy()
-    meta = {k[len("_meta_"):]: sd[k].numpy()
-            for k in sd if k.startswith("_meta_")}
-    if "area_fluct_periods" in meta and "area_fluct_amps" in meta:
-        meta["area_fluct_amp_x_period"] = (
-            meta["area_fluct_periods"] * meta["area_fluct_amps"])
-    return emb, meta
 
 
 def _seed_key(r):
@@ -137,10 +110,8 @@ def _recovery_nc(emb, target):
 
 def _fetch_all_runs(experiment_name, param_filters):
     """Returns dict[(embedding, ablation)] -> representative run."""
-    exps = [e.experiment_id for e in client.search_experiments()
-            if e.name == experiment_name]
-    assert exps, f"No experiment named {experiment_name!r}"
-    runs = mlflow.search_runs(experiment_ids=exps, output_format="list")
+    runs = search_runs(experiment_name)
+    assert runs is not None, f"No experiment named {experiment_name!r}"
 
     by_key: dict[tuple[str, str], list] = {}
     has_conv_fix = False
@@ -201,7 +172,7 @@ def make_scatter_grid(spec, save_dir):
 
     embeddings_cache = {}
     for (emb_type, ablation), run in runs_index.items():
-        emb, meta = _load_emb_meta(run)
+        emb, meta = load_emb_meta(run)
         if emb is None or primary not in meta:
             print(f"  skipping ({emb_type}, {ablation}): no checkpoint or meta")
             continue
@@ -316,7 +287,8 @@ def main():
         description="Supplementary embedding scatter grids")
     p.add_argument("--save-dir",
                    default="./figures")
-    args = p.parse_args()
+    add_source_args(p)
+    args = apply_source_args(p.parse_args())
 
     save_dir = Path(args.save_dir)
     save_dir.mkdir(parents=True, exist_ok=True)

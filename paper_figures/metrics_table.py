@@ -21,8 +21,9 @@ from sklearn.cluster import HDBSCAN, KMeans
 from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
 
 import figure4 as fig4  # noqa: E402
+from _ckpt_store import add_source_args, apply_source_args  # noqa: E402
 from _combo_common import TEX_IQR_DEFS, tex_iqr  # noqa: E402
-from _run_lookup import load_experiments_yaml  # noqa: E402
+from _run_lookup import load_emb_meta, load_experiments_yaml  # noqa: E402
 
 K_NEIGHBORS = 10
 N_BINS = 20
@@ -33,8 +34,8 @@ DATASETS = [
      _SWEEPS.get("oscillation", "oscillation_paper"),
      {"model.embedding_noise_std": "0.1", "model.interaction_dim": "2"},
      "area_fluct_amps"),
-    ("membrane tension",
-     _SWEEPS.get("tension", "tension_clusters"),
+    ("membrane stiffness",
+     _SWEEPS.get("membrane_stiffness", "membrane_stiffness_clusters"),
      {},
      "kls"),
     ("differential adhesion",
@@ -116,7 +117,7 @@ def _load_all_runs():
         runs_by_emb = fig4._fetch_full_runs(exp_name, filters)
         for enc in ENCODERS:
             for r in runs_by_emb[enc]:
-                emb_arr, meta = fig4._load_emb_meta(r)
+                emb_arr, meta = load_emb_meta(r)
                 if emb_arr is None or target not in meta:
                     continue
                 rec = {
@@ -162,7 +163,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--save-dir",
                     default="./figures")
-    args = ap.parse_args()
+    add_source_args(ap)
+    args = apply_source_args(ap.parse_args())
 
     df = _load_all_runs()
 

@@ -7,7 +7,7 @@ reports figure 4's own readout per arm — k-means ARI at known k on the FINAL
 checkpoint — plus the delta against figure 4's published baseline runs, with
 Welch t-tests Benjamini-Hochberg-corrected over all arms.
 
-Everything load-bearing is figure 4's: `_recovery_ari`, `_load_emb_meta`,
+Everything load-bearing is figure 4's: `_recovery_ari`, `load_emb_meta`,
 `_fetch_full_runs` and its oscillation spec (experiment, filters, target).
 
 Caveats:
@@ -28,13 +28,14 @@ import numpy as np
 from scipy import stats
 
 import figure4
+from _ckpt_store import add_source_args, apply_source_args, ckpt_root
 from _combo_common import benjamini_hochberg, fmt_iqr, summarize
-from _run_lookup import load_experiments_yaml
+from _run_lookup import load_emb_meta, load_experiments_yaml
 from _seg_common import delta, mean_se
 
 #: The published configuration this sweep varies around. `hidden_layers` is
 #: not swept, but pinning it lets the baseline check catch a drifted baseline.
-BASELINE = {"hidden_dim": 512, "hidden_layers": 3,
+BASELINE = {"hidden_dim": 512, "hidden_layers": 1,
             "interaction_dim": 2, "embedding_dim": 2}
 
 #: Axis -> the four non-baseline levels. Used for ordering and to report
@@ -51,7 +52,7 @@ AXIS_LABELS = {"hidden_dim": r"hidden width $H$",
 
 def _score(run, primary):
     """figure 4's ARI for one run, or nan when the checkpoint is unreadable."""
-    emb, meta = figure4._load_emb_meta(run)
+    emb, meta = load_emb_meta(run)
     if emb is None or primary not in meta:
         return np.nan
     return figure4._recovery_ari(emb, meta[primary])
@@ -198,7 +199,8 @@ def main():
     ap.add_argument("--alpha", type=float, default=0.05)
     ap.add_argument("--save-dir", default="figures")
     ap.add_argument("--no-plot", action="store_true")
-    args = ap.parse_args()
+    add_source_args(ap)
+    args = apply_source_args(ap.parse_args())
 
     spec = figure4.SPECS[0]
     primary = spec["primary"]
@@ -207,7 +209,7 @@ def main():
     print(f"[{base_exp}] baseline: {len(base_aris)} scored runs; architectures "
           f"(hidden_dim, hidden_layers, interaction_dim, embedding_dim): "
           f"{sorted(base_archs)}")
-    if base_archs != {tuple(str(v) for v in BASELINE.values())}:
+    if ckpt_root() is None and base_archs != {tuple(str(v) for v in BASELINE.values())}:
         print("  !! WARNING: the baseline is not the single published "
               "architecture; the deltas below mix configurations")
 

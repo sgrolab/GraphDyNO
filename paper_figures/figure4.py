@@ -7,7 +7,7 @@ Layout (4 rows):
                column titles appear only above row 1; the λ₀ x-axis label
                and tick labels appear only on row 3.
         Row 1: oscillation_paper (dim=2, embedding_noise=0.1), color = α
-        Row 2: tension_clusters (L_dropout=0.5, n_coeffs=32), color = k̃_L
+        Row 2: membrane_stiffness_clusters (L_dropout=0.5, n_coeffs=32), color = k̃_L
         Row 3: diff_adhesion_ablations, color = k_h
     Row 4   — three ARI bar panels (one per dataset) with chance lines,
               comparing the three full models: median bar, IQR whiskers.
@@ -18,26 +18,25 @@ Rendered natively in matplotlib so the output is fully vector.
 import argparse
 import sys
 from pathlib import Path
-from urllib.parse import urlparse
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import mlflow
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import torch
 from matplotlib.colors import ListedColormap
 from sklearn.cluster import KMeans
 from sklearn.metrics import adjusted_rand_score
 
 ROOT = Path(__file__).resolve().parents[1]
+from _ckpt_store import add_source_args, apply_source_args, ckpt_root  # noqa: E402
 from _combo_common import iqr_errorbar  # noqa: E402
-from _run_lookup import load_experiments_yaml, setup_mlflow_uri  # noqa: E402
+from _run_lookup import (load_emb_meta, load_experiments_yaml,  # noqa: E402
+                         search_runs, setup_mlflow_uri)
 
 setup_mlflow_uri()
-client = mlflow.tracking.MlflowClient()
 _EXPERIMENTS_CFG = load_experiments_yaml().get("sweeps", {})
+_CKPT_MEDIAN_SEEDS = load_experiments_yaml().get("figure4", {}).get("ckpt_median_seeds", {})
 
 EMBEDDINGS = ["dino", "fourier", "conv"]
 EMBEDDING_LABELS = {"dino": "DINO", "conv": "Conv", "fourier": "Fourier"}
@@ -59,7 +58,7 @@ SPECS = [
          colorbar_label=r"$\alpha$",
          palette_slice=_CB[2:10],
          row_label="osc. growth"),
-    dict(experiment=_EXPERIMENTS_CFG.get("tension", "tension_clusters"),
+    dict(experiment=_EXPERIMENTS_CFG.get("membrane_stiffness", "membrane_stiffness_clusters"),
          filters={},
          primary="kls",
          colorbar_label=r"$k_\ell$",
@@ -100,31 +99,6 @@ def _categorical_cmap(vals, palette_slice, max_categories=None):
     return cat, cmap, tick_positions, tick_vals
 
 
-def _run_dir(run):
-    art = Path(urlparse(run.info.artifact_uri).path)
-    if (art / "graph_decoder_model.pth").exists():
-        return art
-    hdir = run.data.tags.get("hydra_output_dir")
-    if hdir and (Path(hdir) / "graph_decoder_model.pth").exists():
-        return Path(hdir)
-    return None
-
-
-def _load_emb_meta(run):
-    rdir = _run_dir(run)
-    if rdir is None:
-        return None, None
-    sd = torch.load(rdir / "graph_decoder_model.pth",
-                    map_location="cpu", weights_only=False)
-    emb = sd["parameter_embedding"].numpy()
-    meta = {k[len("_meta_"):]: sd[k].numpy()
-            for k in sd if k.startswith("_meta_")}
-    if "area_fluct_periods" in meta and "area_fluct_amps" in meta:
-        meta["area_fluct_amp_x_period"] = (
-            meta["area_fluct_periods"] * meta["area_fluct_amps"])
-    return emb, meta
-
-
 def _normalize_emb(emb):
     centered = emb - emb.mean(axis=0, keepdims=True)
     span = centered.max(axis=0) - centered.min(axis=0)
@@ -154,12 +128,10 @@ def _recovery_ari(emb, target):
 
 
 def _fetch_full_runs(experiment_name, param_filters):
-    exps = [e.experiment_id for e in client.search_experiments()
-            if e.name == experiment_name]
-    if not exps:
+    runs = search_runs(experiment_name)
+    if runs is None:
         print(f"  [{experiment_name}] not found in MLflow — skipping row.")
         return {e: [] for e in EMBEDDINGS}
-    runs = mlflow.search_runs(experiment_ids=exps, output_format="list")
     out = {e: [] for e in EMBEDDINGS}
     _has_conv_fix = False
     for r in runs:
@@ -196,10 +168,11 @@ def _build_spec_data(spec):
     # directly across seeds because each is in a separately rotated/reflected
     # coordinate frame.
     seeds_per_emb = {e: [] for e in EMBEDDINGS}
+    seed_ids = {e: [] for e in EMBEDDINGS}
     rows = []
     for e in EMBEDDINGS:
         for r in runs_by_emb[e]:
-            emb, meta = _load_emb_meta(r)
+            emb, meta = load_emb_meta(r)
             if emb is None or primary not in meta:
                 continue
             ari = _recovery_ari(emb, meta[primary])
@@ -215,7 +188,9 @@ def _build_spec_data(spec):
             })
             if np.isfinite(ari):
                 seeds_per_emb[e].append((ari, _normalize_emb(emb), meta[primary]))
+                seed_ids[e].append(str(r.data.params.get("model.seed")))
 
+    pins = _CKPT_MEDIAN_SEEDS.get(spec["experiment"], {}) if ckpt_root() is not None else {}
     chosen_per_emb = {}
     for e, seeds in seeds_per_emb.items():
         if not seeds:
@@ -224,6 +199,14 @@ def _build_spec_data(spec):
         # seeds; take the lower one so the panel never looks better than the median.
         order = np.argsort([s[0] for s in seeds], kind="stable")
         chosen_per_emb[e] = seeds[order[(len(seeds) - 1) // 2]]
+        pin = str(pins.get(e))
+        if pin in seed_ids[e]:
+            pinned = seeds[seed_ids[e].index(pin)]
+            if pinned[0] == chosen_per_emb[e][0]:
+                chosen_per_emb[e] = pinned
+            else:
+                print(f"  [{spec['experiment']}] pinned {e} seed {pin} does not tie "
+                      f"the median ARI; using the median seed")
 
     scatter_cache = {e: (emb_n, vals) for e, (_, emb_n, vals) in chosen_per_emb.items()}
     scatter_ari = {e: ari for e, (ari, _, _) in chosen_per_emb.items()}
@@ -320,7 +303,7 @@ def draw_scatter_row(fig, row_slot, scatter_cache, df, colorbar_label,
 
 _DATASET_LABELS = {
     "oscillation_paper": "Osc. growth",
-    "tension_clusters": "Membrane stiffness",
+    "membrane_stiffness_clusters": "Membrane stiffness",
     "diff_adhesion_ablations": "Differential adhesion",
 }
 _LATEX_ENCODER_ORDER = ["dino", "conv", "fourier"]
@@ -508,13 +491,14 @@ def _parse_args():
     p.add_argument("--save-dir", default="./figures")
     p.add_argument("--oscillation-experiment",
                    default=_EXPERIMENTS_CFG.get("oscillation", "oscillation_paper"))
-    p.add_argument("--tension-experiment",
-                   default=_EXPERIMENTS_CFG.get("tension", "tension_clusters"))
+    p.add_argument("--membrane-stiffness-experiment",
+                   default=_EXPERIMENTS_CFG.get("membrane_stiffness", "membrane_stiffness_clusters"))
     p.add_argument("--adhesion-experiment",
                    default=_EXPERIMENTS_CFG.get("adhesion", "diff_adhesion_ablations"))
-    args = p.parse_args()
+    add_source_args(p)
+    args = apply_source_args(p.parse_args())
     SPECS[0]["experiment"] = args.oscillation_experiment
-    SPECS[1]["experiment"] = args.tension_experiment
+    SPECS[1]["experiment"] = args.membrane_stiffness_experiment
     SPECS[2]["experiment"] = args.adhesion_experiment
     return args
 

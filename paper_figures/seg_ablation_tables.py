@@ -41,12 +41,17 @@ import numpy as np
 from scipy import stats
 
 import figure4
+from _ckpt_store import add_source_args, apply_source_args, ckpt_root
 from _combo_common import benjamini_hochberg, fmt_iqr, holm
 from _run_lookup import load_experiments_yaml, setup_mlflow_uri
 from _seg_common import (BEST, DOSES, FINAL, JOINT_PCT, KIND_LABELS, RATE_KINDS,
                          delta, dose_x, load_levels, score, stat)
 
 PRIMARY = "area_fluct_amps"
+
+
+def dose_word():
+    return "requested" if ckpt_root() is not None else "realized"
 
 
 def welch(scores, level, control):
@@ -78,7 +83,7 @@ def single_table(scores, diag, control, alpha):
 
     print(f"\nper-level detail (delta vs matched control `{control}`; "
           f"BH over all {len(finite)} ablated levels)")
-    hdr = (f"{'level':14s} {'n':>3s} {'realized':>9s} {'delta':>8s} {'se':>7s} "
+    hdr = (f"{'level':14s} {'n':>3s} {dose_word():>9s} {'delta':>8s} {'se':>7s} "
            f"{'p':>10s} {'p_BH':>10s}")
     print(hdr + "\n" + "-" * len(hdr))
     for lvl in family:
@@ -119,7 +124,7 @@ def joint_table(experiment, control, alpha):
             continue
         for a, g in zip(names, groups):
             x = dose_x(diag, a, "seg_rate")
-            print(f"  {a:13s} n={g.size:2d}  realized {x:.4f}  mean {g.mean():.4f}  "
+            print(f"  {a:13s} n={g.size:2d}  {dose_word()} {x:.4f}  mean {g.mean():.4f}  "
                   f"SD {g.std(ddof=1):.4f}  SE {g.std(ddof=1) / np.sqrt(g.size):.4f}")
 
         print("\n  assumption checks: Shapiro-Wilk p per group "
@@ -155,7 +160,7 @@ def joint_table(experiment, control, alpha):
         lr = stats.linregress(xs, ys)
         rho, prho = stats.spearmanr(xs, ys)
         lo, hi = lr.slope - 1.96 * lr.stderr, lr.slope + 1.96 * lr.stderr
-        print(f"  3. planned trend on log10(realized dose): slope {lr.slope:+.4f}/decade "
+        print(f"  3. planned trend on log10({dose_word()} dose): slope {lr.slope:+.4f}/decade "
               f"SE {lr.stderr:.4f} r={lr.rvalue:+.3f} p={lr.pvalue:.4f};  "
               f"Spearman rho={rho:+.3f} p={prho:.4f};  95% CI "
               f"[{lo:+.4f}, {hi:+.4f}]{' (excludes 0)' if lo * hi > 0 else ' (includes 0)'}")
@@ -176,7 +181,8 @@ def main():
     ap.add_argument("--control", default=cfg.get("control", "none"),
                     help="tags.seg_ablation of the matched-control arm")
     ap.add_argument("--alpha", type=float, default=0.05)
-    args = ap.parse_args()
+    add_source_args(ap)
+    args = apply_source_args(ap.parse_args())
     print(f"tracking uri: {setup_mlflow_uri()}")
 
     scores, diag = load_levels(args.experiment, PRIMARY)

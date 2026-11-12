@@ -4,29 +4,28 @@ Top row:    schematic icons for the four ablations (static, temporal, spatial,
             full), embedded as nested <svg> elements at composite time so they
             render exactly as authored in paper_figures/icons/.
 Bottom row: ARI-vs-ablation bar plots (median bar, IQR whiskers) for the
-            three encoder×ablation sweep experiments (oscillating / tension /
+            three encoder×ablation sweep experiments (oscillating / membrane_stiffness /
             adhesion). Experiment names come from paper_figures/experiments.yaml.
 """
 import argparse
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from urllib.parse import urlparse
 
 import cairosvg
 
 import matplotlib
 import matplotlib.pyplot as plt
-import mlflow
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import torch
 from sklearn.cluster import KMeans
 from sklearn.metrics import adjusted_rand_score
 
+from _ckpt_store import add_source_args, apply_source_args  # noqa: E402
 from _combo_common import iqr_errorbar  # noqa: E402
-from _run_lookup import load_experiments_yaml, setup_mlflow_uri  # noqa: E402
+from _run_lookup import (load_emb_meta, load_experiments_yaml,  # noqa: E402
+                         search_runs, setup_mlflow_uri)
 
 setup_mlflow_uri()
 _EXPERIMENTS_CFG = load_experiments_yaml().get("sweeps", {})
@@ -46,34 +45,6 @@ N_BINS = 20
 
 _SEED_PARAM_NAMES = ("seed", "training.seed", "model.seed", "p.seed",
                      "data.seed", "dataloader.seed")
-
-
-def _checkpoint_path(run):
-    art = Path(urlparse(run.info.artifact_uri).path)
-    p = art / "graph_decoder_model.pth"
-    if p.exists():
-        return p
-    hdir = run.data.tags.get("hydra_output_dir")
-    if hdir:
-        p = Path(hdir) / "graph_decoder_model.pth"
-        if p.exists():
-            return p
-    return None
-
-
-def _load_emb_meta(run):
-    p = _checkpoint_path(run)
-    if p is None:
-        return None, None
-    sd = torch.load(p, map_location="cpu", weights_only=False)
-    emb = sd["parameter_embedding"].numpy()
-    meta = {k[len("_meta_"):]: sd[k].numpy()
-            for k in sd if k.startswith("_meta_")}
-    if "area_fluct_periods" in meta and "area_fluct_amps" in meta:
-        meta["area_fluct_amp_x_period"] = (
-            meta["area_fluct_periods"] * meta["area_fluct_amps"]
-        )
-    return emb, meta
 
 
 def _seed_of(run):
@@ -110,12 +81,9 @@ def _recovery_ari(emb, target, n_bins=N_BINS):
 
 def _load_dino_nc_df(experiment_name, param_filters, target_meta):
     """One row per DINO run matching the filters: ablation, seed, NC."""
-    client = mlflow.tracking.MlflowClient()
-    exp_ids = [e.experiment_id for e in client.search_experiments()
-               if e.name == experiment_name]
-    if not exp_ids:
+    runs = search_runs(experiment_name)
+    if runs is None:
         raise RuntimeError(f"No MLflow experiment named {experiment_name!r}")
-    runs = mlflow.search_runs(experiment_ids=exp_ids, output_format="list")
     rows = []
     for r in runs:
         if r.info.status != "FINISHED":
@@ -140,7 +108,7 @@ def _load_dino_nc_df(experiment_name, param_filters, target_meta):
                 break
         if skip:
             continue
-        emb, meta = _load_emb_meta(r)
+        emb, meta = load_emb_meta(r)
         if emb is None or target_meta not in meta:
             continue
         ari = _recovery_ari(emb, meta[target_meta])
@@ -220,7 +188,7 @@ def make_figure(
     osc_experiment = osc_experiment or _EXPERIMENTS_CFG.get(
         "oscillation", "oscillation_paper")
     kl_experiment = kl_experiment or _EXPERIMENTS_CFG.get(
-        "tension", "tension_clusters")
+        "membrane_stiffness", "membrane_stiffness_clusters")
     da_experiment = da_experiment or _EXPERIMENTS_CFG.get(
         "adhesion", "diff_adhesion_ablations")
     sns.set_context("paper")
@@ -363,11 +331,12 @@ def _parse_args():
     p.add_argument("--icons-dir", default="./paper_figures/icons")
     p.add_argument("--oscillation-experiment",
                    default=_EXPERIMENTS_CFG.get("oscillation", "oscillation_paper"))
-    p.add_argument("--tension-experiment",
-                   default=_EXPERIMENTS_CFG.get("tension", "tension_clusters"))
+    p.add_argument("--membrane-stiffness-experiment",
+                   default=_EXPERIMENTS_CFG.get("membrane_stiffness", "membrane_stiffness_clusters"))
     p.add_argument("--adhesion-experiment",
                    default=_EXPERIMENTS_CFG.get("adhesion", "diff_adhesion_ablations"))
-    return p.parse_args()
+    add_source_args(p)
+    return apply_source_args(p.parse_args())
 
 
 if __name__ == "__main__":
@@ -377,5 +346,5 @@ if __name__ == "__main__":
     make_figure(output_path=str(save_dir / "figure5.svg"),
                 icons_dir=args.icons_dir,
                 osc_experiment=args.oscillation_experiment,
-                kl_experiment=args.tension_experiment,
+                kl_experiment=args.membrane_stiffness_experiment,
                 da_experiment=args.adhesion_experiment)

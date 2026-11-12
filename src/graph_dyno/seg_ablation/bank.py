@@ -578,7 +578,7 @@ def resolve_collisions(plans, keeps, *, T, N, gap=MIN_EPISODE_GAP):
 
     Banks are planned per kind on empty occupancy, so a joint arm can select
     two episodes on the same `(t, slot)`. Resolution is by `sha1(kind:id)`
-    order, **not** kind priority: priority is what made the saturated tension
+    order, **not** kind priority: priority is what made the saturated membrane_stiffness
     levels realise wildly different compositions under the two sharing modes,
     because the first kind in the order took everything it wanted and the last
     took what was left. A hash order keeps the realized composition roughly
