@@ -3,13 +3,13 @@
 k-means ARI at known k, median [IQR] over runs, in one DINOv3 row:
 
   Two parameters     2 oscillation amplitudes x 2 adhesion strengths (k = 4),
-                     labelled by the full factor tuple; BEST checkpoint
-  Three parameters   x 2 membrane stiffnesses (k = 8); BEST checkpoint
+                     labelled by the full factor tuple
+  Three parameters   x 2 membrane stiffnesses (k = 8)
   Real cells (CTC)   DIC-C2DH-HeLa vs PhC-C2DL-PSC, labelled by dataset, with
-                     the untrained slots dropped first; FINAL checkpoint
+                     the untrained slots dropped first
 
-Checkpoints: each column uses the checkpoint the export holds for its
-experiment (`COLUMNS`), best for the two synthetic columns and final for CTC.
+Checkpoints: every column scores the final checkpoint (`COLUMNS`), which is
+also what the export holds for all three experiments.
 
 Every column is scored by the same pinned readout,
 KMeans(k, n_init=10, random_state=0) on the raw embedding, so the spread is
@@ -57,8 +57,8 @@ from _run_lookup import (find_runs_in_experiment, load_experiments_yaml,
 
 #: (key, column header, checkpoint).
 COLUMNS = [
-    ("two_params", "Two parameters", "best"),
-    ("three_params", "Three parameters", "best"),
+    ("two_params", "Two parameters", "final"),
+    ("three_params", "Three parameters", "final"),
     ("ctc", "Real cells (CTC)", "final"),
 ]
 ROW_LABEL = "DINOv3"

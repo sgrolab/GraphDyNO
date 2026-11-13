@@ -80,10 +80,9 @@ LAYOUTS = {
                    tags={"embedding": "cell_dino", "ablation": "full_int"})
        for exp in ("oscillation_cell_dino", "membrane_stiffness_cell_dino", "diff_adhesion_cell_dino")},
     "osc_amp_x_adhesion_seeds20":
-        Layout("tab_complex_cases/two_params/osc_amp_x_adhesion_seeds20", file="best"),
+        Layout("tab_complex_cases/two_params/osc_amp_x_adhesion_seeds20"),
     "osc_amp_x_adhesion_x_membrane_stiffness_kh1e5_seeds20":
-        Layout("tab_complex_cases/three_params/osc_amp_x_adhesion_x_membrane_stiffness_kh1e5_seeds20",
-               file="best"),
+        Layout("tab_complex_cases/three_params/osc_amp_x_adhesion_x_membrane_stiffness_kh1e5_seeds20"),
     "ctc_dic_psc_late": Layout("tab_complex_cases/ctc",
                                tags={"ablation": "b_shape_scale_int"},
                                params={"model.embedding_dim": "16",
