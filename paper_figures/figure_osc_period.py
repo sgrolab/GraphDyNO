@@ -13,7 +13,7 @@ The period experiment comes from `timescales` in experiments.yaml; the amplitude
 reference row is figure 4's oscillation spec (`sweeps.oscillation`). Set
 MLFLOW_URI to the tracking store.
 
-Usage:  python paper_figures/figure_osc_period.py [--save-dir DIR]
+Usage:  python paper_figures/figure_osc_period.py [--save-dir DIR] [--ckpt-dir [DIR]]
 """
 import argparse
 import itertools
@@ -28,7 +28,8 @@ from sklearn.metrics import adjusted_rand_score
 
 import figure4 as f4  # noqa: E402  (same directory)
 from _combo_common import fmt_iqr
-from _run_lookup import load_experiments_yaml
+from _ckpt_store import add_source_args, apply_source_args
+from _run_lookup import load_emb_meta, load_experiments_yaml
 
 EXPERIMENT = load_experiments_yaml().get("timescales", {}).get(
     "experiment", "osc_period_clusters")
@@ -43,7 +44,7 @@ def collect():
     runs = f4._fetch_full_runs(EXPERIMENT, {})["dino"]
     rows, seeds = [], []
     for r in runs:
-        emb, meta = f4._load_emb_meta(r)
+        emb, meta = load_emb_meta(r)
         if emb is None or PRIMARY not in meta:
             continue
         per = meta[PRIMARY]
@@ -197,7 +198,7 @@ def paper_amplitude_aris():
     km, hdb = [], []
     spec = f4.SPECS[0]
     for r in f4._fetch_full_runs(spec["experiment"], spec["filters"])["dino"]:
-        emb, meta = f4._load_emb_meta(r)
+        emb, meta = load_emb_meta(r)
         if emb is None or "area_fluct_amps" not in meta:
             continue
         a = f4._recovery_ari(emb, meta["area_fluct_amps"])
@@ -213,4 +214,5 @@ def paper_amplitude_aris():
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--save-dir", default="figures")
-    main(ap.parse_args().save_dir)
+    add_source_args(ap)
+    main(apply_source_args(ap.parse_args()).save_dir)

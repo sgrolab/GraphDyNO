@@ -318,6 +318,7 @@ python paper_figures/arch_sweep_table.py       # Supp — architecture sweep tab
 python paper_figures/cell_dino_table.py        # Supp — Cell-DINO vs DINOv3 table
 python paper_figures/seg_ablation_tables.py    # Supp — segmentation-error tables
 python paper_figures/stochastic_table.py       # Supp — f_p noise ladder table
+python paper_figures/figure_osc_period.py      # Supp — tab:timescales (period/amplitude ARI)
 ```
 
 The mapping from figure script → MLflow experiment name lives in
