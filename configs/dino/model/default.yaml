@@ -1,5 +1,5 @@
 dino_backend: hf
-dino_model: B
+dino_model: SP
 dino_repo_dir: null
 dino_weights_path: null
 dino_weights_url: null

@@ -119,9 +119,9 @@ checkpoint.
 
 ### Cell-DINO (optional; Appendix "GraphDyNO functions well with CellDINO")
 
-Cell-DINO's code and weights are **CC-BY-NC — research use only, non-commercial**,
-so neither is vendored here and any result produced with them carries that
-restriction.
+Cell-DINO's weights are relased under the **FAIR Non-Commercial Research License**,
+so it is not vendored here and any result produced with it carries that
+restriction. In order to use Cell-DINO, you must complete the following steps:
 
 1. Accept the licence at
    <https://ai.meta.com/resources/models-and-libraries/cell-dino-downloads/>;
