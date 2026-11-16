@@ -275,8 +275,9 @@ run_combined_params() {
         +experiment_name=osc_amp_x_adhesion_seeds20 \
         +embedding=dino_sp \
         +ablation=full_no_history \
-        model.embedding_dim=16 \
+        model.embedding_dim=32 \
         model.interaction_dim=32 \
+        dataloader.batch_size=64 \
         dataloader.gpu_cache_memory=60GB \
         model.seed=range\(0,20\)
 
@@ -288,6 +289,7 @@ run_combined_params() {
         +ablation=full_no_history \
         model.embedding_dim=32 \
         model.interaction_dim=32 \
+        dataloader.batch_size=64 \
         dataloader.gpu_cache_memory=60GB \
         model.seed=range\(0,20\)
 }
