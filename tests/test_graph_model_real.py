@@ -274,6 +274,39 @@ class TestTrainingStep:
         for key in ("position_mse", "velocity_mse"):
             torch.testing.assert_close(off[key], base[key], msg=key)
 
+    @pytest.mark.parametrize("switch", [True, False])
+    def test_prev_invalid_velocity_does_not_reach_neighbours(self, switch):
+        """D115: at a slot's first valid frame, prev_L / prev_crop_sides are the
+        blank embedding and 0, so L_velocity / scale_velocity are fabricated.
+        The strict mask drops that slot's own losses, but edges only need
+        validity at t, so the fake velocities reach valid neighbours' messages.
+        With the switch on, junk at t-1 for slot 2 must not move any loss; with
+        it off, it must (otherwise this test would not cover the leak)."""
+        cfg = _make_cfg(model_overrides={
+            "gnn_inputs": ["L", "scale", "L_velocity", "scale_velocity"],
+            "zero_velocity_on_prev_invalid": switch,
+        })
+        model = _make_model(cfg)
+        model.eval()
+        valid = torch.ones(BATCH_SIZE, N_NODES, dtype=torch.bool)
+        batch = _make_batch(valid)
+        batch["prev_valid"][:, 2] = False    # _make_W: edge 1-2, node 1 hears 2
+        base = model.training_step(batch)
+
+        g = torch.Generator().manual_seed(123)
+        batch["prev_L"][:, 2] = torch.randn(BATCH_SIZE, BOTTLENECK_DIM,
+                                            generator=g) * 10
+        batch["prev_crop_sides"][:, 2] = torch.rand(BATCH_SIZE, generator=g) * 30
+        dirty = model.training_step(batch)
+
+        keys = ("position_mse", "velocity_mse", "dino_mse", "scale_mse")
+        if switch:
+            for key in keys:
+                torch.testing.assert_close(dirty[key], base[key], msg=key)
+        else:
+            assert any(not torch.allclose(dirty[k], base[k]) for k in keys), \
+                "switch off: prev-invalid junk should leak into neighbours"
+
     def test_strict_mode_uses_prev_valid(self):
         model = _make_model()
         valid = torch.ones(BATCH_SIZE, N_NODES, dtype=torch.bool)

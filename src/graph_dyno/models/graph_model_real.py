@@ -44,6 +44,15 @@ class GraphModelReal(GraphModelDINO):
                 f"got {self.loss_mask_mode!r}"
             )
 
+        # D115: a slot invalid at t-1 carries the blank embedding and crop side
+        # 0 there, so at its first valid frame L - prev_L and s - prev_s are
+        # fabricated. The strict mask drops that slot's own losses, but edges
+        # only need validity at t, so the fake velocities still reach valid
+        # neighbours through the GNN. Default False keeps old configs and
+        # seg-ablation on the published behaviour; unified_real.yaml sets true.
+        self.zero_velocity_on_prev_invalid = cfg.model.get(
+            "zero_velocity_on_prev_invalid", False)
+
         # Absolute position must stay structurally unavailable to every
         # prediction head, or the FOV extent of each video leaks straight into
         # the embedding and fakes the separation result. states are
@@ -205,6 +214,10 @@ class GraphModelReal(GraphModelDINO):
         if self.use_velocities:
             L_velocity = L - batch["prev_L"]
             scale_velocity = current_scale - batch["prev_crop_sides"].float()
+            if self.zero_velocity_on_prev_invalid and "prev_valid" in batch:
+                pv = batch["prev_valid"]
+                L_velocity = L_velocity * pv.unsqueeze(-1)
+                scale_velocity = scale_velocity * pv
 
         L_history = None
         if self.use_history:
