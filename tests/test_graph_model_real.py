@@ -288,7 +288,7 @@ class TestTrainingStep:
         model = _make_model()
         keys = set(model.training_step(_make_batch()))
         with initialize_config_dir(config_dir=CONFIG_DIR, version_base=None):
-            for name in ("real_dic_psc_late",):
+            for name in ("real_dic_psc_late", "real_dic_psc_late_crop_only"):
                 cfg = compose(config_name="config", overrides=[f"+experiment={name}"])
                 terms = set(cfg.training.loss_terms)
                 missing = keys - terms

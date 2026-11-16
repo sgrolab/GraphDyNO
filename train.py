@@ -157,17 +157,24 @@ def _load_companion_embeddings(cache_dir, cache_id, companion_suffix, traj_indic
     return embeddings
 
 
-def _normalize_scale(embeddings, cache_dir, cache_id, traj_indices, group_key):
-    """Rescale crop sides, positions and velocities so every group's median valid crop side is equal.
+def _normalize_scale(embeddings, cache_dir, cache_id, traj_indices, group_key,
+                     rescale_states=True):
+    """Rescale crop sides (and by default positions and velocities) so every group's median valid crop side is equal.
 
     Removes cell size as a group fingerprint (e.g. the 7.5x HeLa/PSC gap in
     real_dic_psc_late) while keeping each group's relative size variation:
     crop sides are multiplied by target / median_g, where target is the
     geometric mean of the group medians. `group_key` names a per-slot
     `sim_metadata` field such as "dataset_id" or "video_id". The scale input,
-    its velocity and the scale target all read these crop sides. States and
-    next_states (x, y, vx, vy) are multiplied by the same factor, so relative
-    positions and velocities share the group's rescaled units.
+    its velocity and the scale target all read these crop sides.
+
+    Two modes:
+      * rescale_states=True ("full", the default): states and next_states
+        (x, y, vx, vy) are multiplied by the same factor, so relative
+        positions and velocities share the group's rescaled units.
+      * rescale_states=False ("crop_sides"): only the crop sides are
+        rescaled. No states/next_states keys are added, so the dataloader
+        keeps the on-disk positions and velocities in raw pixels.
 
     Returns (medians, target, factors), the dicts keyed by group code.
     """
@@ -194,6 +201,8 @@ def _normalize_scale(embeddings, cache_dir, cache_id, traj_indices, group_key):
         cs = embeddings[t]["crop_sides"]
         # Rounded back to the stored dtype: downstream readers expect integer sides.
         embeddings[t]["crop_sides"] = torch.round(cs.float() * f).to(cs.dtype)
+        if not rescale_states:
+            continue
         traj = torch.load(os.path.join(cache_dir, f"{cache_id}_{t:04d}.pt"),
                           map_location="cpu", mmap=True, weights_only=False)
         for key in ("states", "next_states"):
@@ -408,13 +417,22 @@ def main(cfg: DictConfig) -> None:
     # Equalizes each group's median crop side so cell size alone cannot separate
     # the groups. In memory and after finetuning, so the cache, the finetune key
     # and the finetuned decoder are untouched (finetune reads crop sides from disk).
+    # `+dataloader.scale_norm_mode`: "full" (default) also rescales positions and
+    # velocities by the group factor; "crop_sides" rescales only the crop sides
+    # and leaves states/next_states in raw pixels.
     scale_norm = cfg.dataloader.get("scale_norm", None)
     if scale_norm is not None and embeddings is not None:
+        mode = cfg.dataloader.get("scale_norm_mode", "full")
+        if mode not in ("full", "crop_sides"):
+            raise ValueError(
+                f"dataloader.scale_norm_mode={mode!r}; expected 'full' or 'crop_sides'")
         medians, target, factors = _normalize_scale(
-            embeddings, cache_dir, cache_id, traj_indices, str(scale_norm))
-        print(f"\nscale_norm={scale_norm}: median crop side "
+            embeddings, cache_dir, cache_id, traj_indices, str(scale_norm),
+            rescale_states=(mode == "full"))
+        print(f"\nscale_norm={scale_norm} (mode={mode}): median crop side "
               + ", ".join(f"{g}: {m:.0f} -> x{factors[g]:.3f}" for g, m in medians.items())
               + f" (target {target:.1f})")
+        mlflow.log_param("scale_norm.mode", mode)
         mlflow.log_params({f"scale_norm.factor_{g}": round(f, 6) for g, f in factors.items()})
 
     # --- Segmentation / tracking ablation ---------------------------------

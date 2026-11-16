@@ -723,8 +723,11 @@ class TrajectoryDatasetFromFolder(Dataset):
                 # t = T-1 they are the CURRENT frame (frame f0+T is not
                 # encoded). Flag it so the model drops shape/scale supervision
                 # there while keeping position/velocity, whose targets are real.
+                # Same device as the GPU-cached tensors: no prefetcher moves
+                # batches when the GPU cache is on.
                 sample["shape_target_valid"] = torch.tensor(
-                    timestep_idx < self.trajectory_length - 1)
+                    timestep_idx < self.trajectory_length - 1,
+                    device=sample["valid"].device)
 
             # Uncorrupted targets, present only under a seg-ablation sidecar
             # that asked for them. Inputs stay corrupted — the model is blind;
