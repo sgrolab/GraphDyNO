@@ -250,6 +250,27 @@ class TestThroughDataloader:
         batch = sparse_collate_fn([ds[1], ds[2]])
         assert batch["valid"].shape == (2, N)
 
+    def test_last_timestep_has_no_shape_target(self, cache):
+        """D014: the single-step loader clamps next_t = min(t+1, T-1), so at
+        t = T-1 next_L / next_crop_sides are the current frame. The sample must
+        say so, so the model can drop shape/scale supervision there."""
+        cache_dir, cfg = cache
+        N = cfg.data.n_objects
+        bn = 3
+        embeddings = {
+            i: {"L": torch.zeros(WINDOW, N, bn), "crop_sides": torch.zeros(WINDOW, N)}
+            for i in range(4)
+        }
+        ds = TrajectoryDatasetFromFolder(cache_dir, enable_gpu_cache=False,
+                                         embeddings=embeddings)
+        ds.include_images = False
+        for t in range(1, WINDOW - 1):
+            assert bool(ds[t]["shape_target_valid"]), t
+        assert not bool(ds[WINDOW - 1]["shape_target_valid"])
+
+        batch = sparse_collate_fn([ds[1], ds[WINDOW - 1]])
+        assert batch["shape_target_valid"].tolist() == [True, False]
+
     def test_last_timestep_next_valid_is_not_the_clamped_valid(self, cache):
         """The window-seam defect the explicit next_valid key exists to avoid.
 

@@ -252,6 +252,28 @@ class TestTrainingStep:
         torch.testing.assert_close(model.training_step(batch)["position_mse"],
                                    with_prev)
 
+    def test_shape_target_valid_drops_only_shape_and_scale(self):
+        """D014: at t = T-1 next_L / next_crop_sides are the current frame, so
+        the dataloader flags the sample and shape/scale must go unsupervised
+        while position/velocity (true next-frame targets) are kept."""
+        model = _make_model()
+        model.eval()
+        valid = torch.ones(BATCH_SIZE, N_NODES, dtype=torch.bool)
+        batch = _make_batch(valid)
+        base = model.training_step(batch)
+
+        batch["shape_target_valid"] = torch.ones(BATCH_SIZE, dtype=torch.bool)
+        on = model.training_step(batch)
+        for key in ("position_mse", "velocity_mse", "dino_mse", "scale_mse"):
+            torch.testing.assert_close(on[key], base[key], msg=key)
+
+        batch["shape_target_valid"] = torch.zeros(BATCH_SIZE, dtype=torch.bool)
+        off = model.training_step(batch)
+        assert off["dino_mse"].item() == 0.0
+        assert off["scale_mse"].item() == 0.0
+        for key in ("position_mse", "velocity_mse"):
+            torch.testing.assert_close(off[key], base[key], msg=key)
+
     def test_strict_mode_uses_prev_valid(self):
         model = _make_model()
         valid = torch.ones(BATCH_SIZE, N_NODES, dtype=torch.bool)

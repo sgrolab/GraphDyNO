@@ -217,6 +217,13 @@ class GraphModelReal(GraphModelDINO):
         seen = batch["valid"] if "valid" in batch else None
         S = self.spatial_dim
 
+        # At the last step of a window the dataloader has no next-frame
+        # embedding (next_L / next_crop_sides are the current frame), so shape
+        # and scale are unsupervised there; position/velocity still use `mask`.
+        shape_mask = mask
+        if "shape_target_valid" in batch:
+            shape_mask = mask & batch["shape_target_valid"][:, None]
+
         return {
             "position_mse": self._masked_mse(
                 new_x[..., :S], batch["next_states"][..., :S], mask,
@@ -224,13 +231,13 @@ class GraphModelReal(GraphModelDINO):
             "velocity_mse": self._masked_mse(
                 new_x[..., S:S * 2], batch["next_states"][..., S:S * 2], mask,
             ),
-            "dino_mse": self._masked_mse(L_out, target_next, mask),
+            "dino_mse": self._masked_mse(L_out, target_next, shape_mask),
             # (B, N) tensors — unsqueeze both sides so the shape[-1] denominator
             # stays 1 and the value matches the unmasked mse_loss convention.
             "scale_mse": self._masked_mse(
                 (next_scale / self.image_size).unsqueeze(-1),
                 (batch["next_crop_sides"].float() / self.image_size).unsqueeze(-1),
-                mask,
+                shape_mask,
             ),
             "parameter_embedding_l2": self._masked_embedding_l2(seen),
         }

@@ -719,6 +719,12 @@ class TrajectoryDatasetFromFolder(Dataset):
                 sample["valid"] = trajectory_data["valid"][timestep_idx]
                 sample["next_valid"] = trajectory_data["next_valid"][timestep_idx]
                 sample["prev_valid"] = trajectory_data["valid"][prev_t]
+                # next_L / next_crop_sides come from the clamped next_t, so at
+                # t = T-1 they are the CURRENT frame (frame f0+T is not
+                # encoded). Flag it so the model drops shape/scale supervision
+                # there while keeping position/velocity, whose targets are real.
+                sample["shape_target_valid"] = torch.tensor(
+                    timestep_idx < self.trajectory_length - 1)
 
             # Uncorrupted targets, present only under a seg-ablation sidecar
             # that asked for them. Inputs stay corrupted — the model is blind;
