@@ -36,7 +36,10 @@ from graph_dyno.plotting.plot import (
     load_run,
     rescale_dino_to_channeled,
 )
-from train import _load_companion_embeddings, _precompute_bottlenecks
+# train.py sits at the repo root, which `python paper_figures/figure2.py` does not
+# put on sys.path (only paper_figures/ is).
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from train import _load_companion_embeddings, _precompute_bottlenecks  # noqa: E402
 from graph_dyno.data.trajectory_generator import generate_config_hash, generate_data
 from graph_dyno.precompute.precompute_embeddings import precompute_all, precompute_sdfs
 
