@@ -1,0 +1,166 @@
+data:
+  type: simulation
+  n_objects: 600
+  image_size: 128
+  domain_size: 100
+  dt: 0.01
+  seed: 5
+  generator:
+    n_trajectories: 3
+    trajectory_length: 2000
+    init_steps: 0
+    init_compress_force: 0
+    seed_offset: 1
+    cache_dir: /groups/sgro/sgrolab/Corey/paper_caches/diff_adhesion_fp25_cache/
+    overwrite_existing: false
+  params:
+    name: polyhoop
+    num_substeps: 100
+    gam: 1000.0
+    ka: 100000.0
+    kr: 10000000.0
+    kh:
+      dist: logspace
+      min: 10000.0
+      max: 50000.0
+      steps: 2
+      repeats: 300
+    kl: 10000.0
+    kb: 0
+    edge_thickness: 0.01
+    cv: 10
+    fp: 25
+    Dr: 1
+    growth_rate: 0
+    oscillatory_growth: false
+    area_fluct_period: 0
+    area_fluct_amp: 0
+    gamma: 1000.0
+    gam_fluct_period: 0
+    gam_fluct_amp: 0
+    gamma_rate: 0
+    kl_fluct_period: 0
+    kl_fluct_amp: 0
+    kl_rate: 0
+    num_vertices: 40
+    radius: 2.0
+    density_fraction: 1.0
+    r_cutoff: 5.0
+    position_noise_std: 0
+    periodic_boundary: false
+    relaxation_steps: 0
+    elongation: 0
+    placement: hex_grid
+    shuffle_placement: true
+    wall_box: true
+    wall_box_size: 0
+    wall_kh: 0
+dataloader:
+  batch_size: 16
+  num_workers: 8
+  train_ratio: 0.9
+  val_ratio: 0.1
+  test_ratio: 0.0
+  cpu_cache_size: -1
+  enable_gpu_cache: true
+  gpu_cache_memory: 80GB
+  persistent_workers: true
+  prefetch_factor: 2
+  val_split_mode: temporal
+  seed: 42
+  folder_path: /groups/sgro/sgrolab/Corey/paper_caches/diff_adhesion_fp25_cache/
+model:
+  embedding_dim: 2
+  num_nodes: 600
+  interaction_dim: 32
+  spatial_dim: 2
+  hidden_dim: 512
+  hidden_layers: 3
+  activation: PReLU
+  feature_dim: 4
+  indices_of_mlp_features:
+  - 2
+  - 3
+  skip_connection: true
+  L_skip_connection: true
+  embedding_noise_std: 0.1
+  input_noise_std: 0.1
+  seed: 0
+  history_window: 0
+  L_dropout_prob: 0.0
+  scale_dropout_prob: 0.0
+training:
+  n_epochs: 150
+  optimizer:
+    type: AdamW
+    lr: 0.001
+    weight_decay: 0.0001
+  grad_clip_norm: 10.0
+  loss_terms:
+    position_mse: 1.0
+    velocity_mse: 1.0
+    image_bce: 1.0
+    image_dice: 1.0
+    shape_mse: 1.0
+    parameter_embedding_l2: 0
+    dino_mse: 1.0
+    scale_mse: 1.0
+  finetune_decoder:
+    enabled: true
+    n_epochs: 4
+    lr: 0.0001
+    batch_size: 256
+    sdf_workers: 32
+    refreeze: true
+    n_trajectories: 1
+    loss_terms:
+      image_mse: 1.0
+      embedding_l2: 0.0
+    cache_weights: true
+    force_refinetune: false
+  rollout:
+    enabled: false
+    schedule:
+    - - 0
+      - 1
+    - - 20
+      - 2
+    - - 40
+      - 4
+    lr_decay_on_transition: 1.0
+    lr_warmup_epochs: 0
+shape:
+  type: dino
+  checkpoint_path: ./checkpoints/SP_256.pt
+  dino_model: null
+  dino_use_patches: true
+  dino_backend: hf
+  dino_repo_dir: null
+  dino_weights_path: null
+  dino_weights_url: null
+  dino_trust_weights: false
+  sdf_workers: 32
+  target_size: 224
+  finetune:
+    enabled: true
+    lr: 0.001
+    epochs: 4
+pth:
+  S_256: ./checkpoints/S_256.pt
+  SP_256: ./checkpoints/SP_256.pt
+  B_256: ./checkpoints/B_256.pt
+  L_256: ./checkpoints/L_256.pt
+  H_256: ./checkpoints/H_256.pt
+  F_256: ./checkpoints/F_256.pt
+  F_1024: ./checkpoints/F_1024.pt
+  F_2048: ./checkpoints/F_2048.pt
+  Conv_16: ./checkpoints/Conv_16.pt
+  Conv_32: ./checkpoints/Conv_32.pt
+  Conv_64: ./checkpoints/Conv_64.pt
+  Conv_128: ./checkpoints/Conv_128.pt
+  Conv_256: ./checkpoints/Conv_256.pt
+  DINOV2_REPO: ./dinov2
+  CellDino_CA_L16_backbone: ./checkpoints/channel_adaptive_dino_vitl16_pretrain_cells-ef7c17ff.pth
+  CellDino_CA_256: ./checkpoints/CellDino_CA_256.pt
+tags:
+  embedding: dino

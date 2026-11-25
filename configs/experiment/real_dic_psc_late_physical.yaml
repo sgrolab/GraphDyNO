@@ -1,0 +1,14 @@
+# @package _global_
+# real_dic_psc_late in physical units with no per-dataset normalization:
+# x, y and crop sides in µm, vx, vy in µm/min, integrator dt in min.
+defaults:
+  - real_dic_psc_late
+
+dataloader:
+  scale_norm: null
+  physical_units:
+    DIC-C2DH-HeLa: {um_per_px: 0.19, min_per_frame: 10}
+    PhC-C2DL-PSC:  {um_per_px: 1.6,  min_per_frame: 10}
+
+tags:
+  units: physical

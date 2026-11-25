@@ -1,0 +1,11 @@
+# @package _global_
+# real_dic_psc_late with scale_norm applied to the crop sides s_t only;
+# positions and velocities stay in raw pixel units.
+defaults:
+  - real_dic_psc_late
+
+dataloader:
+  scale_norm_mode: crop_sides
+
+tags:
+  scale_norm_mode: crop_sides

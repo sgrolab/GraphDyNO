@@ -260,7 +260,7 @@ run_scale_only() {
         training.loss_terms.shape_mse=0 \
         training.loss_terms.velocity_mse=0 \
         training.loss_terms.parameter_embedding_l2=0 \
-        training.n_epochs=80 \
+        training.n_epochs=150 \
         model.seed=range\(0,200,10\)
 }
 
