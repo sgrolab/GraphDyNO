@@ -157,6 +157,39 @@ def _load_companion_embeddings(cache_dir, cache_id, companion_suffix, traj_indic
     return embeddings
 
 
+def _to_physical_units(embeddings, cache_dir, cache_id, traj_indices, units):
+    """Convert crop sides and states from pixels and frames to µm and minutes, in memory.
+
+    `units` maps a `sim_metadata["dataset_id"]` code to (um_per_px, min_per_frame).
+    On disk, crop sides are in raster-grid px (one grid px is
+    `sim_metadata["px_per_grid_unit"]` video px) and states are x, y in video
+    px and vx, vy in px/frame. Afterwards crop sides and x, y are in µm and
+    vx, vy in µm/min. Crop sides stay float, so they are not quantized to whole µm.
+
+    Like `_normalize_scale`, the results go into the companion dict, which the
+    dataloader overlays on the trajectory, so the cache and the finetuned
+    decoder are untouched. Returns the shared min_per_frame (the integrator
+    dt). Raises if the datasets disagree, because the model has a single dt.
+    """
+    dts = {mpf for _, mpf in units.values()}
+    if len(dts) != 1:
+        raise ValueError(f"physical_units: min_per_frame differs across datasets {units}; "
+                         f"the integrator has a single dt")
+    for t in traj_indices:
+        traj = torch.load(os.path.join(cache_dir, f"{cache_id}_{t:04d}.pt"),
+                          map_location="cpu", mmap=True, weights_only=False)
+        meta = traj["sim_metadata"]
+        codes = meta["dataset_id"].long().tolist()
+        um = torch.tensor([units[c][0] for c in codes])                    # (N,) µm/px
+        um_per_min = um / torch.tensor([units[c][1] for c in codes])       # (N,) (µm/min)/(px/frame)
+        cs = embeddings[t]["crop_sides"]
+        embeddings[t]["crop_sides"] = cs.float() * float(meta["px_per_grid_unit"]) * um
+        factor = torch.stack([um, um, um_per_min, um_per_min], dim=-1)     # (N, 4)
+        for key in ("states", "next_states"):
+            embeddings[t][key] = traj[key] * factor
+    return dts.pop()
+
+
 def _normalize_scale(embeddings, cache_dir, cache_id, traj_indices, group_key,
                      rescale_states=True):
     """Rescale crop sides (and by default positions and velocities) so every group's median valid crop side is equal.
@@ -199,14 +232,19 @@ def _normalize_scale(embeddings, cache_dir, cache_id, traj_indices, group_key,
     for t in traj_indices:
         f = torch.tensor([factors[g] for g in groups[t].tolist()])  # (N,)
         cs = embeddings[t]["crop_sides"]
-        # Rounded back to the stored dtype: downstream readers expect integer sides.
-        embeddings[t]["crop_sides"] = torch.round(cs.float() * f).to(cs.dtype)
+        # Integer sides are rounded back to the stored dtype, since downstream
+        # readers expect integers. Float sides (µm, from _to_physical_units) stay unrounded.
+        if cs.is_floating_point():
+            embeddings[t]["crop_sides"] = cs * f
+        else:
+            embeddings[t]["crop_sides"] = torch.round(cs.float() * f).to(cs.dtype)
         if not rescale_states:
             continue
         traj = torch.load(os.path.join(cache_dir, f"{cache_id}_{t:04d}.pt"),
                           map_location="cpu", mmap=True, weights_only=False)
         for key in ("states", "next_states"):
-            embeddings[t][key] = traj[key] * f[None, :, None]
+            # Already-converted states (physical units) take precedence over disk.
+            embeddings[t][key] = embeddings[t].get(key, traj[key]) * f[None, :, None]
     return medians, target, factors
 
 
@@ -412,6 +450,26 @@ def main(cfg: DictConfig) -> None:
             traj_indices=traj_indices, encoder=encoder_for_ft,
             all_sdf=all_sdf_for_ft, embeddings=embeddings)
         del encoder_for_ft, all_sdf_for_ft
+
+    # --- Physical units (`dataloader.physical_units: {<dataset>: {um_per_px, min_per_frame}}`) ---
+    # Crop sides and x, y become µm, vx, vy become µm/min and the integrator dt
+    # becomes min/frame. In memory and after finetuning, like scale_norm below;
+    # if both are set, scale_norm then normalizes the µm values.
+    physical_units = cfg.dataloader.get("physical_units", None)
+    if physical_units and embeddings is not None:
+        codes = {}  # same coding as real_data/tracks.py: first appearance in videos
+        for video in cfg.data.params.videos:
+            codes.setdefault(video.dataset, len(codes))
+        missing = sorted(set(codes) - set(physical_units))
+        if missing:
+            raise KeyError(f"dataloader.physical_units has no entry for {missing}")
+        units = {codes[name]: (float(physical_units[name].um_per_px),
+                               float(physical_units[name].min_per_frame)) for name in codes}
+        model.dt = _to_physical_units(embeddings, cache_dir, cache_id, traj_indices, units)
+        print("\nphysical_units: " + ", ".join(
+            f"{name} ({codes[name]}): {units[codes[name]][0]} um/px, {units[codes[name]][1]} min/frame"
+            for name in codes) + f"; integrator dt = {model.dt} min")
+        mlflow.log_param("physical_units.dt_min", model.dt)
 
     # --- Per-group scale normalization (`+dataloader.scale_norm=<sim_metadata key>`) ---
     # Equalizes each group's median crop side so cell size alone cannot separate
